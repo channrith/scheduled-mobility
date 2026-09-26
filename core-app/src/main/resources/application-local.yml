@@ -1,0 +1,19 @@
+# Local development against docker-compose.yml. Env vars still win over these defaults.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:mobility}
+    username: ${DB_USERNAME:mobility}
+    password: ${DB_PASSWORD:mobility}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASSWORD:mobility}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USERNAME:mobility}
+    password: ${RABBITMQ_PASSWORD:mobility}
+
+management:
+  endpoint:
+    health:
+      show-details: always
