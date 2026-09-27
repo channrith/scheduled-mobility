@@ -13,6 +13,18 @@ spring:
     username: ${RABBITMQ_USERNAME:mobility}
     password: ${RABBITMQ_PASSWORD:mobility}
 
+identity:
+  otp:
+    # Dev-only default. Set OTP_HMAC_SECRET in every real environment.
+    hmac-secret: ${OTP_HMAC_SECRET:local-dev-otp-secret-change-me-0123456789}
+  token:
+    # Without JWT_PRIVATE_KEY/JWT_PUBLIC_KEY a throwaway key pair is generated at startup.
+    allow-generated-keys: true
+
+idempotency:
+  # Dev-only default (base64 of 32 bytes). Set IDEMPOTENCY_ENCRYPTION_KEY in every real environment.
+  encryption-key: ${IDEMPOTENCY_ENCRYPTION_KEY:bG9jYWwtZGV2LWlkZW1wb3RlbmN5LWtleS0zMmJ5dGU=}
+
 management:
   endpoint:
     health:

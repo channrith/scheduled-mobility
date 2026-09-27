@@ -10,6 +10,17 @@ spring:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  messages:
+    basename: i18n/shared,i18n/identity
+    fallback-to-system-locale: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
   flyway:
     locations: classpath:db/migration
     default-schema: public
@@ -23,6 +34,18 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+
+identity:
+  otp:
+    hmac-secret: ${OTP_HMAC_SECRET}
+  token:
+    private-key: ${JWT_PRIVATE_KEY:}
+    public-key: ${JWT_PUBLIC_KEY:}
+    private-key-file: ${JWT_PRIVATE_KEY_FILE:}
+    public-key-file: ${JWT_PUBLIC_KEY_FILE:}
+
+idempotency:
+  encryption-key: ${IDEMPOTENCY_ENCRYPTION_KEY}
 
 server:
   port: ${SERVER_PORT:8080}

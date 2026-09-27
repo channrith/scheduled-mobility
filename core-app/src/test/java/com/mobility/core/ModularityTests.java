@@ -24,7 +24,7 @@ class ModularityTests {
 	void containsAllExpectedModules() {
 		assertThat(modules.stream().map(ApplicationModule::getIdentifier).map(Object::toString))
 			.containsExactlyInAnyOrder("identity", "driver", "corporate", "place", "pricing", "booking",
-					"dispatch", "payment", "notification", "safety", "support", "audit");
+					"dispatch", "payment", "notification", "safety", "support", "audit", "shared");
 	}
 
 	@Test

@@ -1,0 +1,14 @@
+# Integration tests. Connections come from Testcontainers (@ServiceConnection).
+management:
+  endpoint:
+    health:
+      show-components: always
+
+identity:
+  otp:
+    hmac-secret: test-otp-secret-0123456789abcdefghijkl
+  token:
+    allow-generated-keys: true
+
+idempotency:
+  encryption-key: dGVzdC1pZGVtcG90ZW5jeS1lbmNyeXB0aW9uLWtleSE=
