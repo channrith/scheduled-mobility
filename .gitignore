@@ -5,6 +5,7 @@ target/
 
 # Local env / secrets
 .env
+*.pem
 
 # IDEs
 .idea
