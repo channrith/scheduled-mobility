@@ -65,7 +65,9 @@ set these variables:
 | `IDEMPOTENCY_ENCRYPTION_KEY` | Base64 AES-256 key encrypting cached idempotent responses (`openssl rand -base64 32`) |
 | `PII_ENCRYPTION_KEY` | Base64 AES-256 key for personal data: national ID, bank account, document files (`openssl rand -base64 32`) |
 | `PII_HASH_SECRET` | HMAC secret (≥ 32 chars) for blind indexes, e.g. duplicate national ID detection |
-| `STORAGE_LOCAL_DIR` | Where uploaded documents are stored (default `./var/storage`, git-ignored). Files are encrypted |
+| `STORAGE_TYPE` | `local` (default) or `s3`. Documents are encrypted by the app before they reach either backend |
+| `STORAGE_LOCAL_DIR` | `local`: where uploaded documents are stored (default `./var/storage`, git-ignored) |
+| `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`, `STORAGE_S3_BUCKET`, `STORAGE_S3_ACCESS_KEY`, `STORAGE_S3_SECRET_KEY` | `s3`: any S3-compatible store, e.g. endpoint `https://sgp1.digitaloceanspaces.com`, region `sgp1`. Endpoint empty = AWS S3. The bucket must exist and be private |
 | `SERVER_PORT` | HTTP port (default 8080 core-app, 8081 location-service) |
 
 Generate JWT keys (`*.pem` is git-ignored):

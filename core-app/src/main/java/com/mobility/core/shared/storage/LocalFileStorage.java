@@ -6,12 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
-/** Development storage on the local filesystem. An S3-compatible implementation replaces it later. */
+/** Development storage on the local filesystem; deployed environments use {@link S3ObjectStorage}. */
 class LocalFileStorage implements StorageService {
-
-	private static final Pattern KEY = Pattern.compile("^[A-Za-z0-9_-]+(/[A-Za-z0-9_.-]+)*$");
 
 	private final Path root;
 
@@ -60,10 +57,7 @@ class LocalFileStorage implements StorageService {
 	}
 
 	private Path resolve(String key) {
-		if (key == null || !KEY.matcher(key).matches() || key.contains("..")) {
-			throw new IllegalArgumentException("Invalid storage key: " + key);
-		}
-		Path path = root.resolve(key).normalize();
+		Path path = root.resolve(StorageKeys.requireValid(key)).normalize();
 		if (!path.startsWith(root)) {
 			throw new IllegalArgumentException("Invalid storage key: " + key);
 		}

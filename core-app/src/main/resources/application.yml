@@ -57,8 +57,16 @@ pii:
   hash-secret: ${PII_HASH_SECRET}
 
 storage:
+  # local (filesystem, development) or s3 (any S3-compatible store). Objects are encrypted either way.
+  type: ${STORAGE_TYPE:local}
   local:
     dir: ${STORAGE_LOCAL_DIR:./var/storage}
+  s3:
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    region: ${STORAGE_S3_REGION:us-east-1}
+    bucket: ${STORAGE_S3_BUCKET:}
+    access-key: ${STORAGE_S3_ACCESS_KEY:}
+    secret-key: ${STORAGE_S3_SECRET_KEY:}
 
 springdoc:
   # Off unless explicitly enabled: a public spec maps out the admin API for attackers.
