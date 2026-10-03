@@ -6,7 +6,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Set;
 
 import com.mobility.core.shared.crypto.AesGcm;
@@ -18,6 +21,7 @@ import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -88,18 +92,32 @@ class IdempotencyFilter extends OncePerRequestFilter {
 			problems.write(request, response, HttpStatus.BAD_REQUEST, "idempotency.key-invalid");
 			return;
 		}
-		byte[] body = request.getInputStream().readNBytes((int) props.maxBodySize().toBytes() + 1);
-		if (body.length > props.maxBodySize().toBytes()) {
+		if (request.getContentLengthLong() > props.maxBodySize().toBytes()) {
 			problems.write(request, response, HttpStatus.CONTENT_TOO_LARGE, "idempotency.body-too-large");
 			return;
+		}
+		// Multipart bodies are fingerprinted from the parsed parts (the container keeps them for Spring MVC);
+		// other bodies are read once here and replayed downstream.
+		HttpServletRequest downstream;
+		String fingerprint;
+		if (isMultipart(request)) {
+			fingerprint = multipartFingerprint(request);
+			downstream = request;
+		}
+		else {
+			byte[] body = request.getInputStream().readNBytes((int) props.maxBodySize().toBytes() + 1);
+			if (body.length > props.maxBodySize().toBytes()) {
+				problems.write(request, response, HttpStatus.CONTENT_TOO_LARGE, "idempotency.body-too-large");
+				return;
+			}
+			fingerprint = sha256Hex(body);
+			downstream = new CachedBodyRequest(request, body);
 		}
 
 		String caller = caller();
 		String redisKey = "idempotency:" + sha256Hex(
 				(caller + "\n" + request.getMethod() + "\n" + request.getRequestURI() + "\n" + key)
 					.getBytes(StandardCharsets.UTF_8));
-		String fingerprint = sha256Hex(body);
-
 		Entry lock = new Entry("IN_PROGRESS", fingerprint, 0, null, null, null);
 		if (!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(redisKey, seal(redisKey, lock), props.lockTtl()))) {
 			respondToRetry(request, response, redisKey, fingerprint);
@@ -108,7 +126,7 @@ class IdempotencyFilter extends OncePerRequestFilter {
 
 		ContentCachingResponseWrapper wrapped = new ContentCachingResponseWrapper(response);
 		try {
-			chain.doFilter(new CachedBodyRequest(request, body), wrapped);
+			chain.doFilter(downstream, wrapped);
 		}
 		catch (IOException | ServletException | RuntimeException ex) {
 			redis.delete(redisKey);
@@ -151,6 +169,33 @@ class IdempotencyFilter extends OncePerRequestFilter {
 		}
 		response.setHeader(REPLAYED_HEADER, "true");
 		response.getOutputStream().write(Base64.getDecoder().decode(entry.body()));
+	}
+
+	private static boolean isMultipart(HttpServletRequest request) {
+		String contentType = request.getContentType();
+		return contentType != null && contentType.toLowerCase(java.util.Locale.ROOT).startsWith("multipart/");
+	}
+
+	private static String multipartFingerprint(HttpServletRequest request) throws IOException, ServletException {
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			List<Part> parts = new ArrayList<>(request.getParts());
+			parts.sort(Comparator.comparing(Part::getName));
+			for (Part part : parts) {
+				digest.update(part.getName().getBytes(StandardCharsets.UTF_8));
+				digest.update((byte) 0);
+				digest.update(String.valueOf(part.getSubmittedFileName()).getBytes(StandardCharsets.UTF_8));
+				digest.update((byte) 0);
+				try (var in = part.getInputStream()) {
+					digest.update(in.readAllBytes());
+				}
+				digest.update((byte) 0);
+			}
+			return HexFormat.of().formatHex(digest.digest());
+		}
+		catch (NoSuchAlgorithmException ex) {
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	private static String caller() {

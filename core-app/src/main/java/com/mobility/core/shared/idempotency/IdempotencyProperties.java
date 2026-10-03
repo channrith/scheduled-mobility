@@ -18,6 +18,6 @@ public record IdempotencyProperties(
 		@DefaultValue("24h") Duration ttl,
 		@DefaultValue("10m") Duration anonymousTtl,
 		@DefaultValue("60s") Duration lockTtl,
-		@DefaultValue("1MB") DataSize maxBodySize,
+		@DefaultValue("12MB") DataSize maxBodySize,
 		String encryptionKey) {
 }

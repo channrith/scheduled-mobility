@@ -10,8 +10,13 @@ spring:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  servlet:
+    multipart:
+      # Documents are limited to 10 MB by the application (clear error code); these are the hard limits.
+      max-file-size: 11MB
+      max-request-size: 12MB
   messages:
-    basename: i18n/shared,i18n/identity
+    basename: i18n/shared,i18n/identity,i18n/driver
     fallback-to-system-locale: false
   jpa:
     open-in-view: false
@@ -46,6 +51,28 @@ identity:
 
 idempotency:
   encryption-key: ${IDEMPOTENCY_ENCRYPTION_KEY}
+
+pii:
+  encryption-key: ${PII_ENCRYPTION_KEY}
+  hash-secret: ${PII_HASH_SECRET}
+
+storage:
+  local:
+    dir: ${STORAGE_LOCAL_DIR:./var/storage}
+
+springdoc:
+  # Off unless explicitly enabled: a public spec maps out the admin API for attackers.
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}
+    persist-authorization: true
+    operations-sorter: alpha
+    tags-sorter: alpha
+  # Error responses are documented by OpenApiConventions, not inferred from @ControllerAdvice.
+  override-with-generic-response: false
+  writer-with-order-by-keys: true
+  paths-to-exclude: /api/v1/test/**
 
 server:
   port: ${SERVER_PORT:8080}

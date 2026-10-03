@@ -1,5 +1,7 @@
 package com.mobility.core.identity.user;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/me")
+@Tag(name = "Me", description = "The signed-in user")
 class MeController {
 
 	private final CurrentUserProvider currentUser;
@@ -27,6 +30,7 @@ class MeController {
 	}
 
 	/** Reads the profile from the database, so it reflects role changes made since the token was issued. */
+	@Operation(summary = "Current user's profile and roles", description = "Read from the database, so it includes role changes made after the token was issued.")
 	@GetMapping
 	@Transactional(readOnly = true)
 	Me me() {

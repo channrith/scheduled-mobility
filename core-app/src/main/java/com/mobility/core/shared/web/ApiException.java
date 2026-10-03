@@ -17,6 +17,8 @@ public class ApiException extends RuntimeException {
 
 	private final HttpHeaders headers = new HttpHeaders();
 
+	private final java.util.Map<String, Object> properties = new java.util.LinkedHashMap<>();
+
 	public ApiException(HttpStatus status, String code, Object... args) {
 		super(code);
 		this.status = status;
@@ -27,6 +29,16 @@ public class ApiException extends RuntimeException {
 	public ApiException withHeader(String name, String value) {
 		headers.set(name, value);
 		return this;
+	}
+
+	/** Extra machine-readable member of the problem body, e.g. the list of missing documents. */
+	public ApiException withProperty(String name, Object value) {
+		properties.put(name, value);
+		return this;
+	}
+
+	public java.util.Map<String, Object> getProperties() {
+		return properties;
 	}
 
 	public HttpStatus getStatus() {

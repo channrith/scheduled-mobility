@@ -63,6 +63,9 @@ set these variables:
 | `JWT_PRIVATE_KEY_FILE`, `JWT_PUBLIC_KEY_FILE` | Paths to the RS256 access-token keys, PEM (PKCS#8 / X.509) |
 | `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Local profile generates a throwaway pair if neither is set |
 | `IDEMPOTENCY_ENCRYPTION_KEY` | Base64 AES-256 key encrypting cached idempotent responses (`openssl rand -base64 32`) |
+| `PII_ENCRYPTION_KEY` | Base64 AES-256 key for personal data: national ID, bank account, document files (`openssl rand -base64 32`) |
+| `PII_HASH_SECRET` | HMAC secret (≥ 32 chars) for blind indexes, e.g. duplicate national ID detection |
+| `STORAGE_LOCAL_DIR` | Where uploaded documents are stored (default `./var/storage`, git-ignored). Files are encrypted |
 | `SERVER_PORT` | HTTP port (default 8080 core-app, 8081 location-service) |
 
 Generate JWT keys (`*.pem` is git-ignored):
@@ -106,6 +109,72 @@ on `/auth/refresh`, otherwise a retried refresh looks like token theft and ends 
 
 Errors are RFC 7807 `application/problem+json` with a machine-readable `code`; `title`/`detail` are
 localized from `Accept-Language` (`km` default, `en`).
+
+## Drivers
+
+Staff register drivers; the driver then logs in with phone OTP (the `DRIVER` role is granted on registration).
+
+```
+PENDING ──submit──► DOCS_SUBMITTED ──training──► TRAINING ──approve──► APPROVED ⇄ SUSPENDED
+   └──────────────────────┴───────────── reject ──────┴──► REJECTED (final)
+```
+
+| Transition | Who | Guard |
+|---|---|---|
+| submit (`POST /drivers/me/submit`) | driver | NATIONAL_ID, DRIVING_LICENSE, PROFILE_PHOTO uploaded |
+| training | ADMIN | those documents approved and not expired |
+| approve | ADMIN | + assigned vehicle with approved VEHICLE_REGISTRATION and VEHICLE_INSURANCE |
+| reject | ADMIN | reason (≥ 10 chars) |
+| suspend | ADMIN, SAFETY_OFFICER | APPROVED only; reason (≥ 10 chars); `noticeAt` = when the driver was notified (default now, not in the future) |
+| reinstate | ADMIN | reason; still meets every approval requirement |
+
+Every transition writes `driver.driver_status_history`; staff actions write `audit.audit_logs`.
+
+| Endpoint | Roles |
+|---|---|
+| `POST /api/v1/admin/drivers` (phone, fullName, nationalId?, bank*?) | ADMIN |
+| `GET /api/v1/admin/drivers?status=&page=&size=`, `GET …/{id}` | ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER |
+| `POST …/{id}/training` · `/approve` · `/reject` · `/reinstate` | ADMIN |
+| `POST …/{id}/suspend` `{reason, noticeAt?}` | ADMIN, SAFETY_OFFICER |
+| `POST/DELETE …/{id}/vehicle-assignment` `{vehicleId}` | ADMIN |
+| `POST …/{id}/documents/{docId}/approve` · `/reject` | ADMIN |
+| `GET …/{id}/documents/{docId}/content` (audited) | ADMIN, SAFETY_OFFICER |
+| `POST /api/v1/admin/vehicles`, `GET …/{id}` | ADMIN (create), staff (view) |
+| `GET /api/v1/drivers/me`, `GET/POST /api/v1/drivers/me/documents` (multipart), `POST …/submit` | DRIVER |
+
+Documents: JPEG, PNG or PDF (checked by content, not by the declared type), max 10 MB, encrypted at rest.
+National ID and bank account numbers are encrypted in the database and always shown masked (`•••••5678`).
+A daily job (06:00 Phnom Penh, `driver.documents.expiry-check-cron`) flags approved documents expiring within
+30 days and publishes `DriverDocumentExpiringSoon` (the notification module will act on it).
+
+To try it locally you need an ADMIN: log in once with OTP, then grant the role in the database and log in again:
+```bash
+sql "insert into identity.user_roles (id, user_id, role) select gen_random_uuid(), id, 'ADMIN' from identity.users where phone_e164 = '+85512000001'"
+```
+
+## API documentation
+
+The OpenAPI 3 spec is generated from the controllers (springdoc), so it always matches the code.
+
+| URL (local profile) | What |
+|---|---|
+| http://localhost:8080/swagger-ui.html | Interactive docs. Click **Authorize** and paste an access token (without `Bearer`) |
+| http://localhost:8080/v3/api-docs/all | Full spec (JSON); also `/auth`, `/driver-app`, `/admin` groups |
+
+Every operation documents its required roles (`x-required-roles`, from `@PreAuthorize`), bearer
+security, `Accept-Language`, `Idempotency-Key` (mutating endpoints) and its problem+json errors.
+Endpoint-specific errors are declared with `@ProblemResponse` on the controller method.
+
+The docs are **off outside the `local` profile** (a public spec maps out the admin API); set
+`API_DOCS_ENABLED=true` to turn them on in a non-production environment.
+
+`docs/openapi.json` is a committed snapshot of the spec. `OpenApiSnapshotIT` fails the build when the
+API changes and the snapshot was not updated, so API changes show up in code review. After an
+intended change:
+```bash
+./mvnw verify -Dopenapi.update=true   # then review and commit docs/openapi.json
+```
+The web console can generate TypeScript types from it, e.g. `npx openapi-typescript ../docs/openapi.json -o src/api/schema.ts`.
 
 ## Tests
 

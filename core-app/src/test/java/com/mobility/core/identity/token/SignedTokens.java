@@ -18,6 +18,11 @@ public final class SignedTokens {
 		return issuer.issue(UUID.randomUUID(), names(roles), Map.of(), "en").value();
 	}
 
+	/** Token for a specific (existing) user id, e.g. a registered driver. */
+	public static String forUser(AccessTokenIssuer issuer, UUID userId, Role... roles) {
+		return issuer.issue(userId, names(roles), Map.of(), "en").value();
+	}
+
 	public static String corporate(AccessTokenIssuer issuer, UUID corporateId, Role... roles) {
 		List<String> names = names(roles);
 		return issuer.issue(UUID.randomUUID(), names, Map.of(corporateId.toString(), names), "en").value();

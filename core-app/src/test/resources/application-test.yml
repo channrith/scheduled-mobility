@@ -12,3 +12,20 @@ identity:
 
 idempotency:
   encryption-key: dGVzdC1pZGVtcG90ZW5jeS1lbmNyeXB0aW9uLWtleSE=
+
+pii:
+  encryption-key: dGVzdC1waWktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
+  hash-secret: test-pii-hash-secret-0123456789abcdef
+
+storage:
+  local:
+    dir: target/test-storage
+
+scheduling:
+  enabled: false
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

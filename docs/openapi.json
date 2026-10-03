@@ -1,0 +1,2840 @@
+{
+  "components" : {
+    "schemas" : {
+      "AssignVehicleRequest" : {
+        "properties" : {
+          "vehicleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "vehicleId" ],
+        "type" : "object"
+      },
+      "BankAccountView" : {
+        "properties" : {
+          "accountName" : {
+            "type" : "string"
+          },
+          "accountNumberMasked" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DocumentUpload" : {
+        "properties" : {
+          "expiresOn" : {
+            "description" : "Required for documents that expire (all except PROFILE_PHOTO)",
+            "format" : "date",
+            "type" : "string"
+          },
+          "file" : {
+            "format" : "binary",
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE" ],
+            "type" : "string"
+          },
+          "vehicleId" : {
+            "description" : "Required for VEHICLE_* documents: the vehicle assigned to you",
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "file", "type" ],
+        "type" : "object"
+      },
+      "DocumentView" : {
+        "properties" : {
+          "contentType" : {
+            "type" : "string"
+          },
+          "expiresOn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "expiryFlaggedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "rejectionReason" : {
+            "type" : "string"
+          },
+          "reviewedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reviewedBy" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "PENDING_REVIEW", "APPROVED", "REJECTED", "SUPERSEDED" ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE" ],
+            "type" : "string"
+          },
+          "uploadedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "vehicleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DriverDetail" : {
+        "properties" : {
+          "bankAccount" : {
+            "$ref" : "#/components/schemas/BankAccountView"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "documents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentView"
+            },
+            "type" : "array"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "history" : {
+            "items" : {
+              "$ref" : "#/components/schemas/HistoryView"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nationalIdMasked" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "readiness" : {
+            "$ref" : "#/components/schemas/ReadinessView"
+          },
+          "status" : {
+            "enum" : [ "PENDING", "DOCS_SUBMITTED", "TRAINING", "APPROVED", "REJECTED", "SUSPENDED" ],
+            "type" : "string"
+          },
+          "suspension" : {
+            "$ref" : "#/components/schemas/SuspensionView"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "vehicle" : {
+            "$ref" : "#/components/schemas/VehicleView"
+          }
+        },
+        "type" : "object"
+      },
+      "DriverSummary" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "PENDING", "DOCS_SUBMITTED", "TRAINING", "APPROVED", "REJECTED", "SUSPENDED" ],
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HistoryView" : {
+        "properties" : {
+          "actorUserId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "from" : {
+            "enum" : [ "PENDING", "DOCS_SUBMITTED", "TRAINING", "APPROVED", "REJECTED", "SUSPENDED" ],
+            "type" : "string"
+          },
+          "noticeAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "to" : {
+            "enum" : [ "PENDING", "DOCS_SUBMITTED", "TRAINING", "APPROVED", "REJECTED", "SUSPENDED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Me" : {
+        "properties" : {
+          "fullName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "preferredLang" : {
+            "type" : "string"
+          },
+          "roles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RoleGrant"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "enum" : [ "ACTIVE", "SUSPENDED", "DISABLED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OtpRequest" : {
+        "properties" : {
+          "phone" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "phone" ],
+        "type" : "object"
+      },
+      "OtpRequested" : {
+        "properties" : {
+          "expiresInSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "resendAfterSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "OtpVerify" : {
+        "properties" : {
+          "code" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "phone" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "phone" ],
+        "type" : "object"
+      },
+      "PageResponseDriverSummary" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DriverSummary"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Problem" : {
+        "additionalProperties" : true,
+        "description" : "RFC 7807 problem details. Extra members (e.g. `missing`, `errors`) depend on `code`.",
+        "properties" : {
+          "code" : {
+            "description" : "Stable error code for clients, e.g. `driver.documents-missing`",
+            "example" : "driver.documents-missing"
+          },
+          "detail" : {
+            "example" : "Some required documents have not been uploaded."
+          },
+          "instance" : { },
+          "status" : {
+            "example" : 409
+          },
+          "title" : {
+            "example" : "Conflict"
+          },
+          "type" : {
+            "example" : "about:blank"
+          }
+        }
+      },
+      "ReadinessView" : {
+        "properties" : {
+          "expired" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "hasActiveVehicle" : {
+            "type" : "boolean"
+          },
+          "missing" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "pendingReview" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ReasonRequest" : {
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RefreshRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "refreshToken" ],
+        "type" : "object"
+      },
+      "RegisterDriverRequest" : {
+        "properties" : {
+          "bankAccountName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "bankAccountNumber" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "fullName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "nationalId" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "fullName", "phone" ],
+        "type" : "object"
+      },
+      "RegisterVehicleRequest" : {
+        "properties" : {
+          "color" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "make" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "model" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "modelYear" : {
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 1980,
+            "type" : "integer"
+          },
+          "plateNumber" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "seats" : {
+            "format" : "int32",
+            "maximum" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "vehicleClass" : {
+            "enum" : [ "MOTO", "TUKTUK_REMORK", "TUKTUK_RICKSHAW", "CAR", "SUV", "VAN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "plateNumber", "vehicleClass" ],
+        "type" : "object"
+      },
+      "RoleGrant" : {
+        "properties" : {
+          "role" : {
+            "enum" : [ "PASSENGER", "DRIVER", "CORPORATE_ADMIN", "CORPORATE_BOOKER", "DISPATCHER", "SUPPORT", "SAFETY_OFFICER", "ADMIN" ],
+            "type" : "string"
+          },
+          "scopeId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SuspendRequest" : {
+        "properties" : {
+          "noticeAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SuspensionView" : {
+        "properties" : {
+          "noticeAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "suspendedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "suspendedBy" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TokenResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshExpiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "tokenType" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "VehicleView" : {
+        "properties" : {
+          "assignedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "color" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "make" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "modelYear" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "plateNumber" : {
+            "type" : "string"
+          },
+          "seats" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "ACTIVE", "INACTIVE" ],
+            "type" : "string"
+          },
+          "vehicleClass" : {
+            "enum" : [ "MOTO", "TUKTUK_REMORK", "TUKTUK_RICKSHAW", "CAR", "SUV", "VAN" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    },
+    "securitySchemes" : {
+      "bearer-jwt" : {
+        "bearerFormat" : "JWT",
+        "description" : "Access token from /api/v1/auth/otp/verify or /api/v1/auth/refresh",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Scheduled & contracted mobility platform for Phnom Penh.\n\n* **Authentication:** phone OTP (`/api/v1/auth/otp/request` → `/otp/verify`) returns a 15-minute JWT access token. Send it as `Authorization: Bearer <token>`. Refresh with `/api/v1/auth/refresh`.\n* **Retries:** mutating endpoints accept an `Idempotency-Key` header; a retry with the same key and body replays the original response (`Idempotent-Replayed: true`).\n* **Errors:** RFC 7807 `application/problem+json` with a stable machine-readable `code`; `title` and `detail` are localized from `Accept-Language` (`km` default, `en`).\n* **Time:** timestamps are UTC (ISO-8601); business dates are Asia/Phnom_Penh.",
+    "title" : "Mobility API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/v1/admin/drivers" : {
+      "get" : {
+        "description" : "Newest first. Filter by `status`; `size` is 1–100.\n\n**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER",
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "PENDING", "DOCS_SUBMITTED", "TRAINING", "APPROVED", "REJECTED", "SUSPENDED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseDriverSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "List drivers",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER", "SUPPORT", "SAFETY_OFFICER" ]
+      },
+      "post" : {
+        "description" : "Creates the driver (PENDING) and their login (DRIVER role) for the phone number; an existing passenger account is reused. National ID and bank account are encrypted at rest.\n\n**Roles:** ADMIN",
+        "operationId" : "register_1",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterDriverRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Register a driver",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}" : {
+      "get" : {
+        "description" : "Includes current documents, vehicle, `readiness` (what blocks approval) and status history.\n\n**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER",
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Driver detail",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER", "SUPPORT", "SAFETY_OFFICER" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/approve" : {
+      "post" : {
+        "description" : "Also requires an assigned vehicle with approved VEHICLE_REGISTRATION and VEHICLE_INSURANCE. The driver can then be dispatched.\n\n**Roles:** ADMIN",
+        "operationId" : "approve",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "TRAINING → APPROVED",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/documents/{documentId}/approve" : {
+      "post" : {
+        "description" : "Records reviewer and time. Expired documents cannot be approved.\n\n**Roles:** ADMIN",
+        "operationId" : "approveDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "documentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Approve a document",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/documents/{documentId}/content" : {
+      "get" : {
+        "description" : "Decrypted file. Every access is written to the audit log.\n\n**Roles:** ADMIN, SAFETY_OFFICER",
+        "operationId" : "documentContent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "documentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/pdf" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              },
+              "image/jpeg" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              },
+              "image/png" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The file"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Download a document file",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN", "SAFETY_OFFICER" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/documents/{documentId}/reject" : {
+      "post" : {
+        "description" : "`reason` (≥ 10 characters) is shown to the driver, who must upload a new one.\n\n**Roles:** ADMIN",
+        "operationId" : "rejectDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "documentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Reject a document",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/reinstate" : {
+      "post" : {
+        "description" : "`reason` required; the driver must still meet every approval requirement.\n\n**Roles:** ADMIN",
+        "operationId" : "reinstate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "SUSPENDED → APPROVED",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/reject" : {
+      "post" : {
+        "description" : "From PENDING, DOCS_SUBMITTED or TRAINING. `reason` of at least 10 characters.\n\n**Roles:** ADMIN",
+        "operationId" : "reject",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Reject an applicant (final)",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/suspend" : {
+      "post" : {
+        "description" : "Due process: `reason` (≥ 10 characters) and `noticeAt`, when the driver was notified (defaults to now; not in the future).\n\n**Roles:** ADMIN, SAFETY_OFFICER",
+        "operationId" : "suspend",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SuspendRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "APPROVED → SUSPENDED",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN", "SAFETY_OFFICER" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/training" : {
+      "post" : {
+        "description" : "Requires NATIONAL_ID, DRIVING_LICENSE and PROFILE_PHOTO approved and not expired.\n\n**Roles:** ADMIN",
+        "operationId" : "startTraining",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "DOCS_SUBMITTED → TRAINING",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/drivers/{driverId}/vehicle-assignment" : {
+      "delete" : {
+        "description" : "An approved driver without a vehicle stays APPROVED but is not dispatch-ready.\n\n**Roles:** ADMIN",
+        "operationId" : "unassignVehicle",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Unassign the vehicle",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      },
+      "post" : {
+        "description" : "Ends the driver's previous assignment. A vehicle belongs to one driver at a time (`vehicle.already-assigned`).\n\n**Roles:** ADMIN",
+        "operationId" : "assignVehicle",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "driverId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AssignVehicleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Assign a vehicle",
+        "tags" : [ "Admin · Drivers" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/vehicles" : {
+      "post" : {
+        "description" : "The plate is normalized (uppercase, single spaces) and must be unique (`vehicle.plate-taken`).\n\n**Roles:** ADMIN",
+        "operationId" : "register",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterVehicleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VehicleView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Register a vehicle",
+        "tags" : [ "Admin · Vehicles" ],
+        "x-required-roles" : [ "ADMIN" ]
+      }
+    },
+    "/api/v1/admin/vehicles/{vehicleId}" : {
+      "get" : {
+        "description" : "**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER",
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "vehicleId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VehicleView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Get a vehicle",
+        "tags" : [ "Admin · Vehicles" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER", "SUPPORT", "SAFETY_OFFICER" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "description" : "Revokes the refresh token's session. Unknown tokens are ignored.",
+        "operationId" : "logout",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "summary" : "End the session",
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/otp/request" : {
+      "post" : {
+        "description" : "Accepts Cambodian local formats (`012 345 678`) or E.164. The code is valid for 5 minutes.",
+        "operationId" : "requestOtp",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OtpRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OtpRequested"
+                }
+              }
+            },
+            "description" : "Accepted"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`otp.resend-cooldown` (60 s between codes) or `otp.hourly-limit` (5 per hour); see `Retry-After`"
+          }
+        },
+        "summary" : "Send a login code by SMS",
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/otp/verify" : {
+      "post" : {
+        "description" : "Unknown phone numbers are registered as passengers. Returns a 15-minute access token and a 30-day refresh token.",
+        "operationId" : "verifyOtp",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OtpVerify"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`otp.invalid` (wrong or expired code) or `phone.invalid`"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`account.inactive`: the account is suspended or disabled"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`otp.attempts-exceeded`: 5 wrong codes; request a new one"
+          }
+        },
+        "summary" : "Verify the code and start a session",
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "description" : "Returns new tokens; the presented refresh token stops working. Presenting an already-rotated token revokes the whole session (theft detection), so always send an Idempotency-Key and retry with the same key.",
+        "operationId" : "refresh",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`refresh-token.invalid`: unknown, expired, rotated or revoked"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "summary" : "Rotate the refresh token",
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/drivers/me" : {
+      "get" : {
+        "description" : "Status, documents, vehicle, `readiness` and history. Personal data is masked.\n\n**Roles:** DRIVER",
+        "operationId" : "me_1",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "My driver profile",
+        "tags" : [ "Driver app" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/drivers/me/documents" : {
+      "get" : {
+        "description" : "**Roles:** DRIVER",
+        "operationId" : "documents",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DocumentView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "My current documents",
+        "tags" : [ "Driver app" ],
+        "x-required-roles" : [ "DRIVER" ]
+      },
+      "post" : {
+        "description" : "JPEG, PNG or PDF (checked by content), max 10 MB, encrypted at rest. Replaces the current document of the same type. PROFILE_PHOTO must be an image.\n\n**Roles:** DRIVER",
+        "operationId" : "upload",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DocumentUpload"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "413" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`document.too-large`: over 10 MB"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Upload a document",
+        "tags" : [ "Driver app" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/drivers/me/submit" : {
+      "post" : {
+        "description" : "PENDING → DOCS_SUBMITTED. Requires NATIONAL_ID, DRIVING_LICENSE and PROFILE_PHOTO (`driver.documents-missing` lists what is missing).\n\n**Roles:** DRIVER",
+        "operationId" : "submit",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Submit documents for review",
+        "tags" : [ "Driver app" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/me" : {
+      "get" : {
+        "description" : "Read from the database, so it includes role changes made after the token was issued.",
+        "operationId" : "me",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Me"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Current user's profile and roles",
+        "tags" : [ "Me" ]
+      }
+    }
+  },
+  "servers" : [ {
+    "description" : "This server",
+    "url" : "/"
+  } ],
+  "tags" : [ {
+    "description" : "The signed-in user",
+    "name" : "Me"
+  }, {
+    "description" : "Phone OTP login and session tokens",
+    "name" : "Auth"
+  }, {
+    "description" : "The signed-in driver's profile and documents",
+    "name" : "Driver app"
+  }, {
+    "description" : "Driver onboarding, review and suspension. Personal data is always masked.",
+    "name" : "Admin · Drivers"
+  }, {
+    "description" : "Fleet vehicles",
+    "name" : "Admin · Vehicles"
+  } ]
+}

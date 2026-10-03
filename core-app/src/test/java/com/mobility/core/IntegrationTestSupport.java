@@ -22,6 +22,11 @@ public class IntegrationTestSupport {
 	}
 
 	@Bean
+	CapturedEvents capturedEvents() {
+		return new CapturedEvents();
+	}
+
+	@Bean
 	AuthTestClient authTestClient(@Autowired RestTestClient client, CapturingSmsSender sms) {
 		return new AuthTestClient(client, sms);
 	}

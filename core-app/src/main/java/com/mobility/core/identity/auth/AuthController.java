@@ -1,5 +1,8 @@
 package com.mobility.core.identity.auth;
 
+import io.swagger.v3.oas.annotations.Operation;
+import com.mobility.core.shared.openapi.ProblemResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Locale;
 
 import com.mobility.core.identity.auth.AuthService.Tokens;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth", description = "Phone OTP login and session tokens")
 class AuthController {
 
 	private final AuthService auth;
@@ -31,6 +35,10 @@ class AuthController {
 	}
 
 	/** Always 202 for a valid phone, whether or not an account exists (no account enumeration). */
+	@Operation(summary = "Send a login code by SMS",
+			description = "Accepts Cambodian local formats (`012 345 678`) or E.164. The code is valid for 5 minutes.")
+	@ProblemResponse(status = 429, description = "`otp.resend-cooldown` (60 s between codes) or `otp.hourly-limit` "
+			+ "(5 per hour); see `Retry-After`")
 	@PostMapping("/otp/request")
 	@ResponseStatus(HttpStatus.ACCEPTED)
 	OtpRequested requestOtp(@Valid @RequestBody OtpRequest request, Locale locale) {
@@ -38,16 +46,28 @@ class AuthController {
 		return new OtpRequested(otpProperties.ttl().toSeconds(), otpProperties.resendCooldown().toSeconds());
 	}
 
+	@Operation(summary = "Verify the code and start a session",
+			description = "Unknown phone numbers are registered as passengers. Returns a 15-minute access token and a "
+					+ "30-day refresh token.")
+	@ProblemResponse(status = 400, description = "`otp.invalid` (wrong or expired code) or `phone.invalid`")
+	@ProblemResponse(status = 403, description = "`account.inactive`: the account is suspended or disabled")
+	@ProblemResponse(status = 429, description = "`otp.attempts-exceeded`: 5 wrong codes; request a new one")
 	@PostMapping("/otp/verify")
 	TokenResponse verifyOtp(@Valid @RequestBody OtpVerify request, Locale locale) {
 		return toResponse(auth.verifyOtp(request.phone(), request.code(), locale));
 	}
 
+	@Operation(summary = "Rotate the refresh token",
+			description = "Returns new tokens; the presented refresh token stops working. Presenting an already-rotated "
+					+ "token revokes the whole session (theft detection), so always send an Idempotency-Key and retry "
+					+ "with the same key.")
+	@ProblemResponse(status = 401, description = "`refresh-token.invalid`: unknown, expired, rotated or revoked")
 	@PostMapping("/refresh")
 	TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
 		return toResponse(auth.refresh(request.refreshToken()));
 	}
 
+	@Operation(summary = "End the session", description = "Revokes the refresh token's session. Unknown tokens are ignored.")
 	@PostMapping("/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void logout(@Valid @RequestBody RefreshRequest request) {

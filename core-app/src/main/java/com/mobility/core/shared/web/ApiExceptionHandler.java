@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Locale;
 
 import org.springframework.context.MessageSource;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -34,7 +35,15 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	ResponseEntity<ProblemDetail> handleApiException(ApiException ex) {
 		ProblemDetail problem = problems.build(ex.getStatus(), ex.getCode(), LocaleContextHolder.getLocale(),
 				ex.getArgs());
+		ex.getProperties().forEach(problem::setProperty);
 		return ResponseEntity.status(ex.getStatus()).headers(ex.getHeaders()).body(problem);
+	}
+
+	/** Two staff members changed the same record at once; the client should reload and retry. */
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockingFailureException ex) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(problems.build(HttpStatus.CONFLICT, "concurrent-update", LocaleContextHolder.getLocale()));
 	}
 
 	@Override

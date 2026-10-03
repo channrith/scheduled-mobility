@@ -74,9 +74,25 @@ public class User {
 		return user;
 	}
 
-	public void grant(Role role, UUID scopeId) {
+	/** Account created by staff (e.g. a driver); holds no role until one is granted. */
+	public static User createByStaff(String phoneE164, String fullName, Language preferredLang) {
+		User user = new User(phoneE164, preferredLang);
+		user.fullName = fullName;
+		return user;
+	}
+
+	/** @return true if the role was newly granted */
+	public boolean grant(Role role, UUID scopeId) {
 		if (roles.stream().noneMatch(r -> r.matches(role, scopeId))) {
 			roles.add(new UserRole(this, role, scopeId));
+			return true;
+		}
+		return false;
+	}
+
+	public void setFullNameIfMissing(String fullName) {
+		if (this.fullName == null || this.fullName.isBlank()) {
+			this.fullName = fullName;
 		}
 	}
 

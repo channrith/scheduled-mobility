@@ -33,6 +33,8 @@ class SecurityConfiguration {
 				.requestMatchers("/api/v1/auth/**").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				.requestMatchers("/error").permitAll()
+				// Only exist when springdoc is enabled (local profile or API_DOCS_ENABLED=true).
+				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(rs -> rs
 				.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
