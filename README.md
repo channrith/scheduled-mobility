@@ -89,6 +89,21 @@ set -a; source .env; set +a
 Note: `V1` runs `CREATE EXTENSION postgis / pg_trgm`, which needs a role allowed to create
 extensions. On managed Postgres, pre-install the extensions or grant the migration role accordingly.
 
+## Container images
+
+One `Dockerfile` builds either deployable (`MODULE=core-app` or `location-service`). Tests are skipped in the
+image build; CI runs `./mvnw verify` first. `.dockerignore` is an allowlist, so `.env`, `*.pem` and `var/`
+never enter the build context.
+
+```bash
+docker build --build-arg MODULE=core-app -t mobility/core-app .
+docker build --build-arg MODULE=location-service -t mobility/location-service .
+```
+
+Images run as a non-root user with the heap at 75% of the container memory limit. Configuration is the same
+environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Mount JWT keys read-only and point
+`JWT_PRIVATE_KEY_FILE` / `JWT_PUBLIC_KEY_FILE` at them.
+
 ## Authentication
 
 Phone OTP login. There is no SMS gateway yet: the `LoggingSmsSender` stub writes the code to the core-app log.

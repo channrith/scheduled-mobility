@@ -1,0 +1,10 @@
+# Allowlist: only what the Maven build needs enters the build context. Secrets (.env, *.pem), local
+# uploads (var/), git history and build output stay out by default, including files added later.
+*
+!pom.xml
+!mvnw
+!.mvn/wrapper/maven-wrapper.properties
+!core-app/pom.xml
+!core-app/src/main/
+!location-service/pom.xml
+!location-service/src/main/
