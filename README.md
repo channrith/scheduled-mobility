@@ -60,6 +60,8 @@ set these variables:
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis |
 | `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` | RabbitMQ |
 | `OTP_HMAC_SECRET` | Secret for hashing OTP codes (≥ 32 chars) |
+| `OTP_FIXED_CODE` | **Test environments only.** Every phone logs in with this code (e.g. `123456`) instead of a random one; rate limits still apply. Anyone who knows a phone number can then log in as that user, so never use it with real personal data. Startup fails if a `prod`/`production` profile is active |
+| `BOOTSTRAP_ADMIN_PHONE`, `BOOTSTRAP_ADMIN_NAME` | Granted ADMIN at startup while no ADMIN exists yet (audited, actor = system); ignored afterwards, so it can stay set |
 | `JWT_PRIVATE_KEY_FILE`, `JWT_PUBLIC_KEY_FILE` | Paths to the RS256 access-token keys, PEM (PKCS#8 / X.509) |
 | `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Local profile generates a throwaway pair if neither is set |
 | `IDEMPOTENCY_ENCRYPTION_KEY` | Base64 AES-256 key encrypting cached idempotent responses (`openssl rand -base64 32`) |
@@ -149,10 +151,8 @@ National ID and bank account numbers are encrypted in the database and always sh
 A daily job (06:00 Phnom Penh, `driver.documents.expiry-check-cron`) flags approved documents expiring within
 30 days and publishes `DriverDocumentExpiringSoon` (the notification module will act on it).
 
-To try it locally you need an ADMIN: log in once with OTP, then grant the role in the database and log in again:
-```bash
-sql "insert into identity.user_roles (id, user_id, role) select gen_random_uuid(), id, 'ADMIN' from identity.users where phone_e164 = '+85512000001'"
-```
+To try it locally you need an ADMIN: start the app once with `BOOTSTRAP_ADMIN_PHONE=012000001`, then log in
+with that phone.
 
 ## API documentation
 

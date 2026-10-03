@@ -11,6 +11,8 @@ import org.springframework.validation.annotation.Validated;
 /**
  * @param hmacSecret server-side secret used to hash OTP codes (a bare hash of a 6-digit code is
  * trivially brute-forced)
+ * @param fixedCode test environments without an SMS gateway only: every phone receives this code (see
+ * {@link OtpCodes})
  */
 @Validated
 @ConfigurationProperties("identity.otp")
@@ -21,5 +23,6 @@ public record OtpProperties(
 		@DefaultValue("5") @Min(1) int maxVerifyAttempts,
 		@DefaultValue("6") @Min(4) int codeLength,
 		@Size(min = 32, message = "identity.otp.hmac-secret (OTP_HMAC_SECRET) must be at least 32 characters")
-		String hmacSecret) {
+		String hmacSecret,
+		String fixedCode) {
 }

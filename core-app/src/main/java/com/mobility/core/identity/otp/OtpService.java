@@ -3,7 +3,6 @@ package com.mobility.core.identity.otp;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
 
@@ -35,20 +34,22 @@ public class OtpService {
 
 	private final OtpProperties props;
 
-	private final SecureRandom random = new SecureRandom();
+	private final OtpCodes codes;
 
-	OtpService(StringRedisTemplate redis, SmsSender sms, MessageSource messages, OtpProperties props) {
+	OtpService(StringRedisTemplate redis, SmsSender sms, MessageSource messages, OtpProperties props,
+			OtpCodes codes) {
 		this.redis = redis;
 		this.sms = sms;
 		this.messages = messages;
 		this.props = props;
+		this.codes = codes;
 	}
 
 	/** Generates and sends a new code, replacing any previous one for this phone. */
 	public void request(String phoneE164, Language language) {
 		enforceRequestLimits(phoneE164);
 
-		String code = generateCode();
+		String code = codes.next();
 		redis.opsForValue().set(codeKey(phoneE164), hash(phoneE164, code), props.ttl());
 		redis.delete(attemptsKey(phoneE164));
 
@@ -110,14 +111,6 @@ public class OtpService {
 	private long secondsLeft(String key, Duration fallback) {
 		Long ttl = redis.getExpire(key);
 		return ttl != null && ttl > 0 ? ttl : fallback.toSeconds();
-	}
-
-	private String generateCode() {
-		StringBuilder code = new StringBuilder(props.codeLength());
-		for (int i = 0; i < props.codeLength(); i++) {
-			code.append(random.nextInt(10));
-		}
-		return code.toString();
 	}
 
 	private String hash(String phoneE164, String code) {
