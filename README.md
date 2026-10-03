@@ -104,6 +104,13 @@ Images run as a non-root user with the heap at 75% of the container memory limit
 environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Mount JWT keys read-only and point
 `JWT_PRIVATE_KEY_FILE` / `JWT_PUBLIC_KEY_FILE` at them.
 
+## Staging deployment
+
+`deploy/staging/` runs everything on one server with Docker Compose: Caddy (HTTPS), both apps,
+PostgreSQL + PostGIS, Redis and RabbitMQ. Documents go to an S3-compatible bucket and `backup.sh` uploads a
+nightly `pg_dump` to a second bucket. `generate-secrets.sh` fills `.env` from `.env.staging.example`. The apps
+connect as a non-superuser `mobility_app`; `postgres/init` creates it and the extensions on first start.
+
 ## Authentication
 
 Phone OTP login. There is no SMS gateway yet: the `LoggingSmsSender` stub writes the code to the core-app log.

@@ -1,0 +1,43 @@
+# HTTPS for both apps. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
+# automatically. Hostnames are set in .env; without a domain use sslip.io, e.g. api.203-0-113-7.sslip.io.
+{
+	email {$ACME_EMAIL}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$API_HOST} {
+	import common
+	# Only health is public on actuator; everything else there stays internal.
+	@actuator {
+		path /actuator/*
+		not path /actuator/health /actuator/health/*
+	}
+	respond @actuator 404
+	request_body {
+		max_size 12MB
+	}
+	reverse_proxy core-app:8080
+}
+
+{$LOCATION_HOST} {
+	import common
+	@actuator {
+		path /actuator/*
+		not path /actuator/health /actuator/health/*
+	}
+	respond @actuator 404
+	# WebSocket upgrades are proxied automatically.
+	reverse_proxy location-service:8081
+}
