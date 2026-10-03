@@ -63,7 +63,7 @@ class OtpServiceIT {
 		String phone = SamplePhones.next();
 		otp.request(phone, Language.KM);
 		String code = sms.lastCodeTo(phone);
-		String wrong = code.equals("000000") ? "111111" : "000000";
+		String wrong = code.equals("0000") ? "1111" : "0000";
 
 		for (int i = 1; i <= 4; i++) {
 			assertThatThrownBy(() -> otp.verify(phone, wrong))

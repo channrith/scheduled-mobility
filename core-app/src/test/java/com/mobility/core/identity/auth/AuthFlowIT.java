@@ -96,7 +96,7 @@ class AuthFlowIT {
 	void wrongCodeIsRejectedAndNoUserIsCreated() {
 		String phone = SamplePhones.next();
 		requestOtp(phone);
-		String wrong = sms.lastCodeTo(phone).equals("000000") ? "111111" : "000000";
+		String wrong = sms.lastCodeTo(phone).equals("0000") ? "1111" : "0000";
 
 		verify(phone, wrong, null).expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("otp.invalid");
 

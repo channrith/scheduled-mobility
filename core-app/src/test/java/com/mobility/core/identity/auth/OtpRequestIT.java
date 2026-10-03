@@ -37,7 +37,7 @@ class OtpRequestIT {
 			.jsonPath("$.resendAfterSeconds").isEqualTo(60);
 
 		assertThat(sms.lastTo(phone)).get().extracting(CapturingSmsSender.Sms::message).asString()
-			.contains("លេខកូដផ្ទៀងផ្ទាត់").containsPattern("\\d{6}");
+			.contains("លេខកូដផ្ទៀងផ្ទាត់").containsPattern("\\b\\d{4}\\b");
 	}
 
 	@Test

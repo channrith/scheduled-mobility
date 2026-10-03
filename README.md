@@ -61,7 +61,7 @@ API docs on. For any environment other than `local`, set these variables:
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis |
 | `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` | RabbitMQ |
 | `OTP_HMAC_SECRET` | Secret for hashing OTP codes (≥ 32 chars) |
-| `OTP_FIXED_CODE` | **Test environments only.** Every phone logs in with this code (e.g. `123456`) instead of a random one; rate limits still apply. Anyone who knows a phone number can then log in as that user, so never use it with real personal data. Startup fails if a `prod`/`production` profile is active |
+| `OTP_FIXED_CODE` | **Test environments only.** Every phone logs in with this code (e.g. `1234`) instead of a random one; rate limits still apply. Anyone who knows a phone number can then log in as that user, so never use it with real personal data. Startup fails if a `prod`/`production` profile is active |
 | `BOOTSTRAP_ADMIN_PHONE`, `BOOTSTRAP_ADMIN_NAME` | Granted ADMIN at startup while no ADMIN exists yet (audited, actor = system); ignored afterwards, so it can stay set |
 | `JWT_PRIVATE_KEY_FILE`, `JWT_PUBLIC_KEY_FILE` | Paths to the RS256 access-token keys, PEM (PKCS#8 / X.509) |
 | `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Local profile generates a throwaway pair if neither is set |
@@ -110,7 +110,7 @@ Phone OTP login. There is no SMS gateway yet: the `LoggingSmsSender` stub writes
 
 | Endpoint | |
 |---|---|
-| `POST /api/v1/auth/otp/request` `{"phone"}` | Sends a 6-digit code (valid 5 min). Accepts `012 345 678`, `+85512345678`, etc. Limits per phone: 1 per 60 s, 5 per hour, 5 wrong attempts per code |
+| `POST /api/v1/auth/otp/request` `{"phone"}` | Sends a 4-digit code (valid 5 min). Accepts `012 345 678`, `+85512345678`, etc. Limits per phone: 1 per 60 s, 5 per hour, 5 wrong attempts per code |
 | `POST /api/v1/auth/otp/verify` `{"phone","code"}` | Returns `accessToken` (JWT, 15 min) + `refreshToken` (30 days). Unknown phones are registered as `PASSENGER` |
 | `POST /api/v1/auth/refresh` `{"refreshToken"}` | Rotates the refresh token. Replaying an old one revokes the whole session |
 | `POST /api/v1/auth/logout` `{"refreshToken"}` | Revokes the session |
@@ -118,9 +118,9 @@ Phone OTP login. There is no SMS gateway yet: the `LoggingSmsSender` stub writes
 
 ```bash
 curl -X POST localhost:8080/api/v1/auth/otp/request -H 'Content-Type: application/json' -d '{"phone":"012345678"}'
-# read the code from the core-app log ("SMS to +855*****678: 123456 ...")
+# read the code from the core-app log ("SMS to +855*****678: 4821 ...")
 curl -X POST localhost:8080/api/v1/auth/otp/verify -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(uuidgen)" -d '{"phone":"012345678","code":"123456"}'
+  -H "Idempotency-Key: $(uuidgen)" -d '{"phone":"012345678","code":"4821"}'
 ```
 
 Mutating endpoints accept an optional `Idempotency-Key` header: a retry with the same key and body

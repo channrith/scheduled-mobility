@@ -11,7 +11,7 @@ import com.mobility.core.identity.otp.SmsSender;
 /** Records SMS messages so tests can read the OTP that would have been sent. */
 public class CapturingSmsSender implements SmsSender {
 
-	private static final Pattern CODE = Pattern.compile("\\b(\\d{6})\\b");
+	private static final Pattern CODE = Pattern.compile("\\b(\\d{4})\\b");
 
 	public record Sms(String phone, String message) {
 	}
