@@ -1,0 +1,9 @@
+# Staging (deploy/staging): behind Caddy on a single droplet.
+server:
+  # Trust X-Forwarded-* from Caddy (private-network proxies only).
+  forward-headers-strategy: native
+
+logging:
+  structured:
+    format:
+      console: ecs

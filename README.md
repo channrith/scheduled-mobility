@@ -51,8 +51,9 @@ Stop infrastructure with `docker compose down`. Add `-v` to also delete the data
 ## Configuration
 
 `application.yml` contains no secrets. Every host and credential comes from an environment variable.
-The `local` profile adds defaults that match `docker-compose.yml`. For any other environment,
-set these variables:
+The `local` profile adds defaults that match `docker-compose.yml`. The `staging` profile (both apps) trusts
+`X-Forwarded-*` headers from a reverse proxy on the private network, logs JSON (ECS) to stdout and turns the
+API docs on. For any environment other than `local`, set these variables:
 
 | Variable | Used for |
 |----------|----------|
