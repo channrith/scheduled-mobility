@@ -1,0 +1,71 @@
+name: Deploy staging
+
+# Manual: Actions → Deploy staging → Run workflow. Deploys images CI built for a commit on main.
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Full commit SHA to deploy (empty = the commit this run is started from)
+        required: false
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Secrets live in the "staging" environment (Settings → Environments), where approvals can be required.
+    environment: staging
+    permissions:
+      contents: read
+      packages: read
+    env:
+      TAG: ${{ inputs.image_tag || github.sha }}
+      TARGET: ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_HOST }}
+    steps:
+      - name: Validate image tag
+        # The tag ends up in a command on the server, so only a full commit SHA is accepted.
+        run: |
+          [[ "$TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::image_tag must be a full 40-character commit SHA"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Check that CI built images for this commit
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for module in core-app location-service; do
+            docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$module:$TAG" >/dev/null \
+              || { echo "::error::No $module image for $TAG. Did CI pass on main for this commit?"; exit 1; }
+          done
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Sync deploy bundle
+        # .env (secrets) only exists on the server and is never overwritten or deleted.
+        run: rsync -rlptz --delete --exclude '.env' --exclude '.env.*' deploy/staging/ "$TARGET:/opt/mobility/"
+
+      - name: Deploy
+        # The job's GITHUB_TOKEN lets the server pull; it is logged out again and expires when the job ends.
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | ssh "$TARGET" "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin >/dev/null"
+          set +e
+          ssh "$TARGET" "/opt/mobility/deploy.sh '$TAG'"
+          status=$?
+          ssh "$TARGET" 'docker logout ghcr.io >/dev/null'
+          exit $status
