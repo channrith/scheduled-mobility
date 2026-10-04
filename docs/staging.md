@@ -138,9 +138,36 @@ All commands on the server as `deploy`, in `/opt/mobility`.
 | Restart one service | `docker compose restart core-app` |
 | Change configuration | Edit `.env`, then `docker compose up -d` (recreates only what changed) |
 | Database shell | `docker compose exec postgres psql -U postgres -d mobility` |
-| RabbitMQ UI | On your machine: `ssh -L 15672:localhost:15672 root@146.190.4.99`, open http://localhost:15672 (user `mobility`, password `RABBITMQ_PASSWORD` from `.env`) |
+| RabbitMQ UI, GUI database tools | SSH tunnel, see [Connecting from your machine](#connecting-from-your-machine) |
 | Memory | `docker stats --no-stream`, `free -h` |
 | Disk | `df -h /`, `docker system df`; old images are pruned after each successful deploy |
+
+### Connecting from your machine
+
+Postgres, Redis and RabbitMQ listen on the droplet's loopback (`127.0.0.1`) only: unreachable from the
+internet, reachable through SSH. Open one tunnel and leave it running (local ports differ from the local
+development stack, so both can run at once):
+
+```bash
+ssh -N -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15674:127.0.0.1:5672 -L 15673:127.0.0.1:15672 root@146.190.4.99
+```
+
+| Service | Connect to | User | Password (on the server: `grep '^NAME=' /opt/mobility/.env`) |
+|---|---|---|---|
+| PostgreSQL, database `mobility` | `localhost:15432` | `mobility_app` | `APP_DB_PASSWORD` |
+| Redis | `localhost:16379` | (none) | `REDIS_PASSWORD` |
+| RabbitMQ (AMQP) | `localhost:15674` | `mobility` | `RABBITMQ_PASSWORD` |
+| RabbitMQ management UI | http://localhost:15673 | `mobility` | `RABBITMQ_PASSWORD` |
+
+Use `mobility_app` for day-to-day work: it can do what the app can, but not drop the database or manage
+roles. The `postgres` superuser (`POSTGRES_SUPERUSER_PASSWORD`) is for administration only.
+
+GUI tools (DBeaver, TablePlus, DataGrip, RedisInsight) can open the tunnel themselves: SSH host
+`146.190.4.99`, user `root`, your SSH key; then database host `127.0.0.1` and the server-side port
+(`5432`, `6379`, `5672`).
+
+Staging uses the fixed login code and holds test data, but these are still the live staging stores:
+changing rows or flushing Redis affects everyone testing.
 
 **Rollback and migrations:** rolling back the app does not roll back the database. Flyway ignores migrations
 newer than the running code, so an older app starts, but only if the newer migrations were backwards-compatible

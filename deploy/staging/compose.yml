@@ -1,7 +1,8 @@
 # Staging: everything on one droplet. Run from this directory on the server:
 #   docker compose up -d
 # Secrets and hostnames come from .env next to this file (see .env.staging.example, generate-secrets.sh).
-# Only Caddy publishes ports; Postgres, Redis and RabbitMQ are reachable on the internal network only.
+# Only Caddy publishes public ports. Postgres, Redis and RabbitMQ also listen on the droplet's loopback
+# (127.0.0.1) so they can be reached through an SSH tunnel (docs/staging.md); never from the internet.
 # Memory limits default to a 2 GB droplet (with a swap file); see .env.staging.example for 4 GB values.
 name: mobility-staging
 
@@ -116,6 +117,8 @@ services:
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
       TZ: UTC
     command: ["postgres", "-c", "shared_buffers=${POSTGRES_SHARED_BUFFERS:-64MB}", "-c", "max_connections=50"]
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -136,6 +139,8 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}
       REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-64mb}
+    ports:
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -156,8 +161,9 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./rabbitmq/20-staging.conf:/etc/rabbitmq/conf.d/20-staging.conf:ro
-    # Management UI on the droplet's loopback only: ssh -L 15672:localhost:15672 <droplet>
+    # AMQP and the management UI on the droplet's loopback only (SSH tunnel, docs/staging.md).
     ports:
+      - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
