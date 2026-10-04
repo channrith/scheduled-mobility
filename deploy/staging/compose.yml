@@ -2,6 +2,7 @@
 #   docker compose up -d
 # Secrets and hostnames come from .env next to this file (see .env.staging.example, generate-secrets.sh).
 # Only Caddy publishes ports; Postgres, Redis and RabbitMQ are reachable on the internal network only.
+# Memory limits default to a 2 GB droplet (with a swap file); see .env.staging.example for 4 GB values.
 name: mobility-staging
 
 x-logging: &logging
@@ -33,7 +34,7 @@ services:
     depends_on:
       core-app:
         condition: service_healthy
-    mem_limit: 128m
+    mem_limit: ${CADDY_MEM_LIMIT:-128m}
     logging: *logging
 
   core-app:
@@ -59,13 +60,20 @@ services:
       IDEMPOTENCY_ENCRYPTION_KEY: ${IDEMPOTENCY_ENCRYPTION_KEY:?}
       PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?}
       PII_HASH_SECRET: ${PII_HASH_SECRET:?}
-      STORAGE_TYPE: s3
-      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:?}
-      STORAGE_S3_REGION: ${STORAGE_S3_REGION:?}
-      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:?}
-      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:?}
-      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:?}
+      # local: the documents volume below; s3: Spaces (the app refuses to start without the S3 settings).
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_LOCAL_DIR: /data/storage
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-}
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:-}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:-}
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      # Heap share of mem_limit; the rest is metaspace, threads and buffers (~200 MB).
+      JAVA_TOOL_OPTIONS: ${CORE_APP_JAVA_OPTS:--XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError}
+    volumes:
+      # Encrypted document files while STORAGE_TYPE=local (moving to Spaces: docs/staging.md).
+      - documents:/data/storage
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
       interval: 15s
@@ -79,7 +87,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    mem_limit: 1g
+    mem_limit: ${CORE_APP_MEM_LIMIT:-768m}
     logging: *logging
 
   location-service:
@@ -87,13 +95,14 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      JAVA_TOOL_OPTIONS: ${LOCATION_SERVICE_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 60s
-    mem_limit: 384m
+    mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-256m}
     logging: *logging
 
   postgres:
@@ -106,7 +115,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
       TZ: UTC
-    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=50"]
+    command: ["postgres", "-c", "shared_buffers=${POSTGRES_SHARED_BUFFERS:-64MB}", "-c", "max_connections=50"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -115,7 +124,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    mem_limit: 768m
+    mem_limit: ${POSTGRES_MEM_LIMIT:-384m}
     shm_size: 128m
     logging: *logging
 
@@ -123,9 +132,10 @@ services:
     image: redis:7.4-alpine
     restart: unless-stopped
     # The password is passed via env so it does not show up in `ps` on the host.
-    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxmemory 128mb --maxmemory-policy noeviction --appendonly yes"]
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxmemory \"$$REDIS_MAXMEMORY\" --maxmemory-policy noeviction --appendonly yes"]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-64mb}
     volumes:
       - redis-data:/data
     healthcheck:
@@ -133,7 +143,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    mem_limit: 192m
+    mem_limit: ${REDIS_MEM_LIMIT:-96m}
     logging: *logging
 
   rabbitmq:
@@ -145,6 +155,7 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/20-staging.conf:/etc/rabbitmq/conf.d/20-staging.conf:ro
     # Management UI on the droplet's loopback only: ssh -L 15672:localhost:15672 <droplet>
     ports:
       - "127.0.0.1:15672:15672"
@@ -153,10 +164,11 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
-    mem_limit: 384m
+    mem_limit: ${RABBITMQ_MEM_LIMIT:-320m}
     logging: *logging
 
 volumes:
+  documents:
   caddy-data:
   caddy-config:
   postgres-data:

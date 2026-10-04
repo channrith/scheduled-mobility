@@ -65,9 +65,12 @@ if [[ -n "$ip" ]]; then
 	set_if_empty LOCATION_HOST "loc.${ip//./-}.sslip.io"
 fi
 
+required=(API_HOST LOCATION_HOST ACME_EMAIL BOOTSTRAP_ADMIN_PHONE)
+if [[ "$(current STORAGE_TYPE)" == s3 ]]; then
+	required+=(STORAGE_S3_BUCKET STORAGE_S3_ACCESS_KEY STORAGE_S3_SECRET_KEY)
+fi
 missing=()
-for key in API_HOST LOCATION_HOST ACME_EMAIL IMAGE_TAG BOOTSTRAP_ADMIN_PHONE STORAGE_S3_BUCKET \
-	STORAGE_S3_ACCESS_KEY STORAGE_S3_SECRET_KEY BACKUP_S3_BUCKET BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY; do
+for key in "${required[@]}"; do
 	[[ -n "$(current "$key")" ]] || missing+=("$key")
 done
 if ((${#missing[@]})); then

@@ -17,7 +17,8 @@ RUN --mount=type=cache,target=/root/.m2 \
  && java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
 FROM eclipse-temurin:21-jre-noble
-RUN groupadd --system app && useradd --system --gid app --no-create-home app
+RUN groupadd --system app && useradd --system --gid app --no-create-home app \
+ && mkdir -p /data/storage && chown app:app /data/storage
 WORKDIR /app
 # Least to most frequently changing, so a code change only replaces the last layer.
 COPY --from=build /build/extracted/dependencies/ ./

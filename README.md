@@ -107,8 +107,8 @@ environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Mount JWT
 ## Staging deployment
 
 `deploy/staging/` runs everything on one server with Docker Compose: Caddy (HTTPS), both apps,
-PostgreSQL + PostGIS, Redis and RabbitMQ. Documents go to an S3-compatible bucket and `backup.sh` uploads a
-nightly `pg_dump` to a second bucket. `generate-secrets.sh` fills `.env` from `.env.staging.example`. The apps
+PostgreSQL + PostGIS, Redis and RabbitMQ. Documents go to a Docker volume (`STORAGE_TYPE=local`) or an
+S3-compatible bucket (`s3`); once buckets exist, `backup.sh` uploads a nightly `pg_dump` to a second bucket. `generate-secrets.sh` fills `.env` from `.env.staging.example`. The apps
 connect as a non-superuser `mobility_app`; `postgres/init` creates it and the extensions on first start.
 
 ## Authentication
@@ -213,3 +213,9 @@ The web console can generate TypeScript types from it, e.g. `npx openapi-typescr
   started by Testcontainers. Docker must be running, but `docker compose` does not have to be up.
 
 CI (`.github/workflows/ci.yml`) runs `./mvnw verify` on every push to `main` and on pull requests.
+After `verify` passes on `main`, CI also pushes both images to GHCR
+(`ghcr.io/channrith/scheduled-mobility/{core-app,location-service}`), tagged with the full commit SHA and `main`.
+Deploy to staging with **Actions → Deploy staging → Run workflow** (`.github/workflows/deploy-staging.yml`):
+it syncs `deploy/staging/` to the server and runs `deploy.sh <sha>`, which rolls back to the previous tag if the
+apps do not become healthy. It needs the `staging` environment secrets `STAGING_HOST`, `STAGING_SSH_USER`,
+`STAGING_SSH_KEY` and `STAGING_SSH_KNOWN_HOSTS` (see `docs/staging.md`).
