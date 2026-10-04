@@ -58,11 +58,18 @@ else
 	echo "  keep  JWT_PRIVATE_KEY / JWT_PUBLIC_KEY"
 fi
 
-ip=${PUBLIC_IP:-$(curl -fsS --max-time 2 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)}
-if [[ -n "$ip" ]]; then
-	echo "Hosts (sslip.io for $ip):"
-	set_if_empty API_HOST "api.${ip//./-}.sslip.io"
-	set_if_empty LOCATION_HOST "loc.${ip//./-}.sslip.io"
+if [[ -z "$(current API_HOST)" || -z "$(current LOCATION_HOST)" ]]; then
+	# With a reserved IP, pass it as PUBLIC_IP: the metadata service only knows the droplet's own address.
+	ip=${PUBLIC_IP:-} source="PUBLIC_IP"
+	if [[ -z "$ip" ]]; then
+		ip=$(curl -fsS --max-time 2 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+		source="the droplet's own IP; pass PUBLIC_IP for a reserved IP"
+	fi
+	if [[ -n "$ip" ]]; then
+		echo "Hosts (sslip.io for $ip, from $source):"
+		set_if_empty API_HOST "api.${ip//./-}.sslip.io"
+		set_if_empty LOCATION_HOST "loc.${ip//./-}.sslip.io"
+	fi
 fi
 
 required=(API_HOST LOCATION_HOST ACME_EMAIL BOOTSTRAP_ADMIN_PHONE)

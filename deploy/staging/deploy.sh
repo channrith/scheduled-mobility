@@ -6,6 +6,9 @@
 # is started again. Used by .github/workflows/deploy-staging.yml; also safe to run by hand.
 set -euo pipefail
 cd "$(dirname "$0")"
+# rsync copies the source folder's mode (755) onto this directory; only the deploy user needs to list it.
+# Files keep their modes: containers read Caddyfile, postgres/init and rabbitmq/ as their own users.
+chmod 750 .
 
 tag=${1:?usage: ./deploy.sh <image-tag>}
 timeout_seconds=${DEPLOY_TIMEOUT_SECONDS:-300}

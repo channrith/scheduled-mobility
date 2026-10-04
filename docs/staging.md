@@ -87,7 +87,7 @@ From the repository root on your machine, copy the bundle (later deploys sync it
 
 ```bash
 rsync -rlptv --exclude '.env' deploy/staging/ root@146.190.4.99:/opt/mobility/
-ssh root@146.190.4.99 'chown -R deploy:deploy /opt/mobility'
+ssh root@146.190.4.99 'chown -R deploy:deploy /opt/mobility && chmod 750 /opt/mobility'
 ```
 
 On the server, as `deploy` (`ssh root@146.190.4.99`, then `su - deploy`):
