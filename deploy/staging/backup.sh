@@ -34,7 +34,10 @@ aws() {
 }
 
 echo "$(date -u +%FT%TZ) dumping database"
-docker compose exec -T postgres pg_dump -U postgres --format=custom --no-owner mobility >"$workdir/backup.dump"
+# Extension comments and PostGIS's spatial_ref_sys rows are recreated by CREATE EXTENSION, and restoring
+# them as the non-superuser app role fails, so they are left out (see docs/staging.md, Restoring a backup).
+docker compose exec -T postgres pg_dump -U postgres --format=custom --no-owner --no-comments \
+	--exclude-table-data=public.spatial_ref_sys mobility >"$workdir/backup.dump"
 [[ -s "$workdir/backup.dump" ]] || { echo "empty dump" >&2; exit 1; }
 
 echo "$(date -u +%FT%TZ) uploading s3://$BACKUP_S3_BUCKET/$key ($(du -h "$workdir/backup.dump" | cut -f1))"

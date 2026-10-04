@@ -109,7 +109,7 @@ environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Mount JWT
 `deploy/staging/` runs everything on one server with Docker Compose: Caddy (HTTPS), both apps,
 PostgreSQL + PostGIS, Redis and RabbitMQ. Documents go to a Docker volume (`STORAGE_TYPE=local`) or an
 S3-compatible bucket (`s3`); once buckets exist, `backup.sh` uploads a nightly `pg_dump` to a second bucket. `generate-secrets.sh` fills `.env` from `.env.staging.example`. The apps
-connect as a non-superuser `mobility_app`; `postgres/init` creates it and the extensions on first start.
+connect as a non-superuser `mobility_app`; `postgres/init` creates it and the extensions on first start. Setup and operations: [docs/staging.md](docs/staging.md).
 
 ## Authentication
 
