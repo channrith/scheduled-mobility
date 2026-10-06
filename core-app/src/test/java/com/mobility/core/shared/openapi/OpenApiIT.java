@@ -91,13 +91,14 @@ class OpenApiIT {
 		JsonNode schema = resolve(operation("/api/v1/drivers/me/documents", "post")
 			.at("/requestBody/content/multipart~1form-data/schema"));
 
-		assertThat(schema.get("properties").propertyNames()).contains("type", "vehicleId", "expiresOn", "file");
-		assertThat(schema.at("/properties/file/format").asString()).isEqualTo("binary");
+		assertThat(schema.get("properties").propertyNames()).contains("type", "vehicleId", "expiresOn", "front", "back");
+		assertThat(schema.at("/properties/front/format").asString()).isEqualTo("binary");
+		assertThat(schema.at("/properties/back/format").asString()).isEqualTo("binary");
 	}
 
 	@Test
 	void documentDownloadDeclaresFileTypes() {
-		JsonNode content = operation("/api/v1/admin/drivers/{driverId}/documents/{documentId}/content", "get")
+		JsonNode content = operation("/api/v1/admin/drivers/{driverId}/documents/{documentId}/files/{side}/content", "get")
 			.at("/responses/200/content");
 
 		assertThat(content.propertyNames()).containsExactlyInAnyOrder("application/pdf", "image/jpeg", "image/png");

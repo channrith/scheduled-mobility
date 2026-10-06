@@ -67,13 +67,11 @@ class ApprovalAndSuspensionIT {
 			.expectStatus().isEqualTo(409)
 			.expectBody()
 			.jsonPath("$.code").isEqualTo("driver.documents-missing")
-			.jsonPath("$.missing[0]").isEqualTo("VEHICLE_INSURANCE")
-			.jsonPath("$.missing[1]").isEqualTo("VEHICLE_REGISTRATION");
+			.jsonPath("$.missing.length()").isEqualTo(1)
+			.jsonPath("$.missing[0]").isEqualTo("VEHICLE_REGISTRATION");
 
 		api.approveDocument(driver.driverId(),
 				api.uploadOk(driver.token(), "VEHICLE_REGISTRATION", SampleFiles.pdf(), DriverApi.inOneYear(), vehicle));
-		api.approveDocument(driver.driverId(),
-				api.uploadOk(driver.token(), "VEHICLE_INSURANCE", SampleFiles.pdf(), DriverApi.inOneYear(), vehicle));
 
 		api.admin(driver.driverId(), "approve", null)
 			.expectStatus().isOk().expectBody().jsonPath("$.status").isEqualTo("APPROVED");

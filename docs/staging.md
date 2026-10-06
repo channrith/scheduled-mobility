@@ -199,7 +199,7 @@ When document storage and backups should leave the droplet:
      s3 sync /data "s3://$STORAGE_S3_BUCKET" --exclude '*.tmp'
    ```
 4. Set `STORAGE_TYPE=s3` in `.env`, run `docker compose up -d`, and open an existing document
-   (`GET /api/v1/admin/drivers/{id}/documents/{docId}/content`) to confirm. Keep the volume until you are
+   (`GET /api/v1/admin/drivers/{id}/documents/{docId}/files/front/content`) to confirm. Keep the volume until you are
    sure; then `docker volume rm mobility-staging_documents`.
 5. Schedule backups (`crontab -e` as `deploy`), 02:30 Phnom Penh time:
    ```

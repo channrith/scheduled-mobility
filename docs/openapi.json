@@ -27,17 +27,23 @@
       },
       "DocumentUpload" : {
         "properties" : {
+          "back" : {
+            "description" : "Back side; required for two-sided documents unless `front` is a PDF",
+            "format" : "binary",
+            "type" : "string"
+          },
           "expiresOn" : {
             "description" : "Required for documents that expire (all except PROFILE_PHOTO)",
             "format" : "date",
             "type" : "string"
           },
-          "file" : {
+          "front" : {
+            "description" : "Front side (or a PDF of both sides)",
             "format" : "binary",
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE" ],
+            "enum" : [ "NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO", "VEHICLE_REGISTRATION" ],
             "type" : "string"
           },
           "vehicleId" : {
@@ -46,14 +52,11 @@
             "type" : "string"
           }
         },
-        "required" : [ "file", "type" ],
+        "required" : [ "front", "type" ],
         "type" : "object"
       },
       "DocumentView" : {
         "properties" : {
-          "contentType" : {
-            "type" : "string"
-          },
           "expiresOn" : {
             "format" : "date",
             "type" : "string"
@@ -61,6 +64,12 @@
           "expiryFlaggedAt" : {
             "format" : "date-time",
             "type" : "string"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FileView"
+            },
+            "type" : "array"
           },
           "id" : {
             "format" : "uuid",
@@ -77,16 +86,12 @@
             "format" : "uuid",
             "type" : "string"
           },
-          "sizeBytes" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
           "status" : {
             "enum" : [ "PENDING_REVIEW", "APPROVED", "REJECTED", "SUPERSEDED" ],
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE" ],
+            "enum" : [ "NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO", "VEHICLE_REGISTRATION" ],
             "type" : "string"
           },
           "uploadedAt" : {
@@ -177,6 +182,22 @@
           "userId" : {
             "format" : "uuid",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FileView" : {
+        "properties" : {
+          "contentType" : {
+            "type" : "string"
+          },
+          "side" : {
+            "enum" : [ "FRONT", "BACK" ],
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -821,7 +842,7 @@
     },
     "/api/v1/admin/drivers/{driverId}/approve" : {
       "post" : {
-        "description" : "Also requires an assigned vehicle with approved VEHICLE_REGISTRATION and VEHICLE_INSURANCE. The driver can then be dispatched.\n\n**Roles:** ADMIN",
+        "description" : "Also requires an assigned vehicle with an approved VEHICLE_REGISTRATION. The driver can then be dispatched.\n\n**Roles:** ADMIN",
         "operationId" : "approve",
         "parameters" : [ {
           "in" : "path",
@@ -1049,9 +1070,9 @@
         "x-required-roles" : [ "ADMIN" ]
       }
     },
-    "/api/v1/admin/drivers/{driverId}/documents/{documentId}/content" : {
+    "/api/v1/admin/drivers/{driverId}/documents/{documentId}/files/{side}/content" : {
       "get" : {
-        "description" : "Decrypted file. Every access is written to the audit log.\n\n**Roles:** ADMIN, SAFETY_OFFICER",
+        "description" : "`side` is `front` or `back` (see the document's `files`). Decrypted file; every access is written to the audit log.\n\n**Roles:** ADMIN, SAFETY_OFFICER",
         "operationId" : "documentContent",
         "parameters" : [ {
           "in" : "path",
@@ -1067,6 +1088,14 @@
           "required" : true,
           "schema" : {
             "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "side",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "front", "back" ],
             "type" : "string"
           }
         }, {
@@ -1137,7 +1166,7 @@
         "security" : [ {
           "bearer-jwt" : [ ]
         } ],
-        "summary" : "Download a document file",
+        "summary" : "Download one side of a document",
         "tags" : [ "Admin · Drivers" ],
         "x-required-roles" : [ "ADMIN", "SAFETY_OFFICER" ]
       }
@@ -2570,7 +2599,7 @@
         "x-required-roles" : [ "DRIVER" ]
       },
       "post" : {
-        "description" : "JPEG, PNG or PDF (checked by content), max 10 MB, encrypted at rest. Replaces the current document of the same type. PROFILE_PHOTO must be an image.\n\n**Roles:** DRIVER",
+        "description" : "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back.\n\n**Roles:** DRIVER",
         "operationId" : "upload",
         "parameters" : [ {
           "description" : "Language of error messages and SMS: `km` (default) or `en`",

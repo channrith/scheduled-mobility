@@ -80,9 +80,14 @@ public class DriverApi {
 		return post("/api/v1/admin/drivers/" + driverId + "/" + action, adminToken, body);
 	}
 
-	/** Multipart upload as the driver. Pass nulls for optional fields. */
+	/** Front-only multipart upload as the driver. Pass nulls for optional fields. */
 	public RestTestClient.ResponseSpec upload(String driverToken, String type, byte[] file, String expiresOn,
 			UUID vehicleId, String idempotencyKey) {
+		return upload(driverToken, type, file, null, expiresOn, vehicleId, idempotencyKey);
+	}
+
+	public RestTestClient.ResponseSpec upload(String driverToken, String type, byte[] front, byte[] back,
+			String expiresOn, UUID vehicleId, String idempotencyKey) {
 		MultipartBodyBuilder parts = new MultipartBodyBuilder();
 		parts.part("type", type);
 		if (expiresOn != null) {
@@ -91,12 +96,10 @@ public class DriverApi {
 		if (vehicleId != null) {
 			parts.part("vehicleId", vehicleId.toString());
 		}
-		parts.part("file", new ByteArrayResource(file) {
-			@Override
-			public String getFilename() {
-				return "upload.bin";
-			}
-		}).contentType(MediaType.IMAGE_PNG);
+		parts.part("front", file(front)).contentType(MediaType.IMAGE_PNG);
+		if (back != null) {
+			parts.part("back", file(back)).contentType(MediaType.IMAGE_PNG);
+		}
 		var spec = client.post()
 			.uri("/api/v1/drivers/me/documents")
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + driverToken)
@@ -108,8 +111,21 @@ public class DriverApi {
 		return spec.body(parts.build()).exchange();
 	}
 
+	private static ByteArrayResource file(byte[] content) {
+		return new ByteArrayResource(content) {
+			@Override
+			public String getFilename() {
+				return "upload.bin";
+			}
+		};
+	}
+
 	public UUID uploadOk(String driverToken, String type, byte[] file, String expiresOn, UUID vehicleId) {
-		JsonNode doc = upload(driverToken, type, file, expiresOn, vehicleId, null).expectStatus()
+		return uploadOk(driverToken, type, file, null, expiresOn, vehicleId);
+	}
+
+	public UUID uploadOk(String driverToken, String type, byte[] front, byte[] back, String expiresOn, UUID vehicleId) {
+		JsonNode doc = upload(driverToken, type, front, back, expiresOn, vehicleId, null).expectStatus()
 			.isCreated()
 			.expectBody(JsonNode.class)
 			.returnResult()
@@ -121,9 +137,13 @@ public class DriverApi {
 		return java.time.LocalDate.now().plusYears(1).toString();
 	}
 
-	/** Uploads NATIONAL_ID, DRIVING_LICENSE and PROFILE_PHOTO; returns their ids in that order. */
+	/**
+	 * Uploads NATIONAL_ID (front + back photos), DRIVING_LICENSE (one PDF of both sides) and PROFILE_PHOTO;
+	 * returns their ids in that order.
+	 */
 	public java.util.List<UUID> uploadPersonalDocuments(Registered driver) {
-		return java.util.List.of(uploadOk(driver.token(), "NATIONAL_ID", SampleFiles.jpeg(), inOneYear(), null),
+		return java.util.List.of(
+				uploadOk(driver.token(), "NATIONAL_ID", SampleFiles.jpeg(), SampleFiles.jpeg(), inOneYear(), null),
 				uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), inOneYear(), null),
 				uploadOk(driver.token(), "PROFILE_PHOTO", SampleFiles.png(), null, null));
 	}
@@ -154,10 +174,8 @@ public class DriverApi {
 		admin(driver.driverId(), "training", null).expectStatus().isOk();
 		UUID vehicle = registerVehicle("CAR");
 		assignVehicle(driver.driverId(), vehicle);
-		approveDocument(driver.driverId(),
-				uploadOk(driver.token(), "VEHICLE_REGISTRATION", SampleFiles.pdf(), inOneYear(), vehicle));
-		approveDocument(driver.driverId(),
-				uploadOk(driver.token(), "VEHICLE_INSURANCE", SampleFiles.pdf(), inOneYear(), vehicle));
+		approveDocument(driver.driverId(), uploadOk(driver.token(), "VEHICLE_REGISTRATION", SampleFiles.png(),
+				SampleFiles.png(), inOneYear(), vehicle));
 		admin(driver.driverId(), "approve", null).expectStatus().isOk();
 		return driver;
 	}

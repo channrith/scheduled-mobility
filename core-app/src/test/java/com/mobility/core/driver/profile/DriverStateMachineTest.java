@@ -145,7 +145,7 @@ class DriverStateMachineTest {
 
 		@Test
 		void approvalRejectsExpiredDocuments() {
-			Readiness expired = new Readiness(Set.of(), Set.of(), Set.of(DocumentType.VEHICLE_INSURANCE), true);
+			Readiness expired = new Readiness(Set.of(), Set.of(), Set.of(DocumentType.VEHICLE_REGISTRATION), true);
 
 			assertThatThrownBy(() -> driverIn(TRAINING).approve(expired))
 				.satisfies(ex -> assertProblem(ex, HttpStatus.CONFLICT, "driver.documents-expired"));

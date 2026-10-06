@@ -26,7 +26,7 @@
 	}
 	respond @actuator 404
 	request_body {
-		max_size 12MB
+		max_size 24MB
 	}
 	reverse_proxy core-app:8080
 }

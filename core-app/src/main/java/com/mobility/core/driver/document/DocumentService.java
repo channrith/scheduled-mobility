@@ -4,6 +4,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,20 +63,24 @@ public class DocumentService {
 	}
 
 	/**
-	 * Stores a new document, replacing (superseding) the current one of the same type. The caller has
-	 * already checked that the driver may upload.
+	 * Stores a new document, replacing (superseding) the current one of the same type. Two-sided documents
+	 * need a {@code back} photo unless {@code front} is a PDF (a scan of both sides). The caller has already
+	 * checked that the driver may upload.
 	 */
 	@Transactional
-	public DriverDocument upload(UUID driverId, DocumentType type, UUID vehicleId, LocalDate expiresOn, byte[] content) {
-		if (content == null || content.length == 0) {
-			throw new ApiException(HttpStatus.BAD_REQUEST, "document.empty");
+	public DriverDocument upload(UUID driverId, DocumentType type, UUID vehicleId, LocalDate expiresOn, byte[] front,
+			byte[] back) {
+		String frontType = checkFile(type, front);
+		String backType = null;
+		if (back != null) {
+			if (!type.isTwoSided()) {
+				throw new ApiException(HttpStatus.BAD_REQUEST, "document.back-not-allowed");
+			}
+			backType = checkFile(type, back);
 		}
-		if (content.length > MAX_BYTES) {
-			throw new ApiException(HttpStatus.CONTENT_TOO_LARGE, "document.too-large");
+		else if (type.isTwoSided() && !frontType.equals(FileTypes.PDF)) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "document.back-required");
 		}
-		String contentType = FileTypes.detect(content)
-			.filter(t -> type != DocumentType.PROFILE_PHOTO || !t.equals(FileTypes.PDF))
-			.orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "document.unsupported-type"));
 		LocalDate expiry = validateExpiry(type, expiresOn);
 		validateVehicle(driverId, type, vehicleId);
 
@@ -84,12 +89,34 @@ public class DocumentService {
 			// Flush before inserting the replacement: only one current document per type is allowed.
 			documents.saveAndFlush(previous);
 		});
-		DriverDocument document = new DriverDocument(driverId, vehicleId, type, contentType, content.length,
-				sha256(content), expiry, clock.instant());
+		DriverDocument document = new DriverDocument(driverId, vehicleId, type, expiry, clock.instant());
+		List<StoredSide> stored = new ArrayList<>();
+		stored.add(new StoredSide(document.addFile(DocumentSide.FRONT, frontType, front.length, sha256(front)), front));
+		if (back != null) {
+			stored.add(new StoredSide(document.addFile(DocumentSide.BACK, backType, back.length, sha256(back)), back));
+		}
 		documents.save(document);
-		storage.put(document.getStorageKey(), content);
-		deleteFileIfRolledBack(document.getStorageKey());
+		for (StoredSide side : stored) {
+			storage.put(side.file().getStorageKey(), side.content());
+			deleteFileIfRolledBack(side.file().getStorageKey());
+		}
 		return document;
+	}
+
+	private record StoredSide(DocumentFile file, byte[] content) {
+	}
+
+	/** @return the detected content type */
+	private static String checkFile(DocumentType type, byte[] content) {
+		if (content == null || content.length == 0) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "document.empty");
+		}
+		if (content.length > MAX_BYTES) {
+			throw new ApiException(HttpStatus.CONTENT_TOO_LARGE, "document.too-large");
+		}
+		return FileTypes.detect(content)
+			.filter(t -> type != DocumentType.PROFILE_PHOTO || !t.equals(FileTypes.PDF))
+			.orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "document.unsupported-type"));
 	}
 
 	@Transactional
@@ -116,17 +143,21 @@ public class DocumentService {
 		return document;
 	}
 
-	/** Staff access to a document file. Viewing ID scans is audited. */
+	/** Staff access to one side of a document. Viewing ID scans is audited. */
 	@Transactional
-	public StoredFile content(UUID driverId, UUID documentId) {
+	public StoredFile content(UUID driverId, UUID documentId, String side) {
 		DriverDocument document = find(driverId, documentId);
-		byte[] content = storage.get(document.getStorageKey())
+		DocumentFile file = DocumentSide.parse(side)
+			.flatMap(document::file)
 			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "document.not-found"));
-		auditLog.record("driver.document.viewed", "driver_document", documentId, Map.of("driverId", driverId,
-				"type", document.getType()));
-		String filename = document.getType().name().toLowerCase(java.util.Locale.ROOT) + "-" + documentId + "."
-				+ FileTypes.extension(document.getContentType());
-		return new StoredFile(content, document.getContentType(), filename);
+		byte[] content = storage.get(file.getStorageKey())
+			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "document.not-found"));
+		auditLog.record("driver.document.viewed", "driver_document", documentId,
+				Map.of("driverId", driverId, "type", document.getType(), "side", file.getSide()));
+		String filename = document.getType().name().toLowerCase(java.util.Locale.ROOT) + "-"
+				+ file.getSide().name().toLowerCase(java.util.Locale.ROOT) + "-" + documentId + "."
+				+ FileTypes.extension(file.getContentType());
+		return new StoredFile(content, file.getContentType(), filename);
 	}
 
 	private DriverDocument find(UUID driverId, UUID documentId) {

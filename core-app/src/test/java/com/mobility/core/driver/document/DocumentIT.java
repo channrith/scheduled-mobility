@@ -60,9 +60,9 @@ class DocumentIT {
 			.getResponseBody();
 
 		// Declared as image/png by the client; detected as PDF.
-		assertThat(doc.get("contentType").asString()).isEqualTo("application/pdf");
+		assertThat(doc.at("/files/0/contentType").asString()).isEqualTo("application/pdf");
 		assertThat(doc.get("status").asString()).isEqualTo("PENDING_REVIEW");
-		String key = jdbc.queryForObject("SELECT storage_key FROM driver.driver_documents WHERE id = ?::uuid",
+		String key = jdbc.queryForObject("SELECT storage_key FROM driver.driver_document_files WHERE document_id = ?::uuid",
 				String.class, doc.get("id").asString());
 		byte[] onDisk = readFile(key);
 		assertThat(new String(onDisk, StandardCharsets.ISO_8859_1)).doesNotContain("%PDF");
@@ -100,9 +100,9 @@ class DocumentIT {
 
 	@Test
 	void vehicleDocumentsNeedTheAssignedVehicle() {
-		api.upload(driver.token(), "VEHICLE_INSURANCE", SampleFiles.pdf(), DriverApi.inOneYear(), null, null)
+		api.upload(driver.token(), "VEHICLE_REGISTRATION", SampleFiles.pdf(), DriverApi.inOneYear(), null, null)
 			.expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("document.vehicle-required");
-		api.upload(driver.token(), "VEHICLE_INSURANCE", SampleFiles.pdf(), DriverApi.inOneYear(), UUID.randomUUID(), null)
+		api.upload(driver.token(), "VEHICLE_REGISTRATION", SampleFiles.pdf(), DriverApi.inOneYear(), UUID.randomUUID(), null)
 			.expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("document.vehicle-required");
 		api.upload(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), UUID.randomUUID(), null)
 			.expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("document.vehicle-not-allowed");
@@ -111,7 +111,8 @@ class DocumentIT {
 	@Test
 	void reuploadSupersedesThePreviousDocument() {
 		UUID first = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), null);
-		UUID second = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.jpeg(), DriverApi.inOneYear(), null);
+		UUID second = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.jpeg(), SampleFiles.jpeg(),
+				DriverApi.inOneYear(), null);
 
 		assertThat(status(first)).isEqualTo("SUPERSEDED");
 		assertThat(status(second)).isEqualTo("PENDING_REVIEW");
@@ -155,7 +156,8 @@ class DocumentIT {
 
 	@Test
 	void rejectedDocumentNeedsAReasonAndCountsAsMissing() {
-		UUID doc = api.uploadOk(driver.token(), "NATIONAL_ID", SampleFiles.jpeg(), DriverApi.inOneYear(), null);
+		UUID doc = api.uploadOk(driver.token(), "NATIONAL_ID", SampleFiles.jpeg(), SampleFiles.jpeg(), DriverApi.inOneYear(),
+				null);
 
 		api.admin(driver.driverId(), "documents/" + doc + "/reject", Map.of("reason", "blurry"))
 			.expectStatus().isBadRequest();
@@ -171,7 +173,7 @@ class DocumentIT {
 	@Test
 	void staffCanDownloadTheDecryptedFileAndEveryViewIsAudited() {
 		UUID doc = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), null);
-		String path = "/api/v1/admin/drivers/" + driver.driverId() + "/documents/" + doc + "/content";
+		String path = "/api/v1/admin/drivers/" + driver.driverId() + "/documents/" + doc + "/files/front/content";
 
 		byte[] content = api.get(path, api.adminToken)
 			.expectStatus().isOk()
@@ -191,7 +193,7 @@ class DocumentIT {
 		UUID doc = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), null);
 		Registered other = api.register();
 
-		api.get("/api/v1/admin/drivers/" + other.driverId() + "/documents/" + doc + "/content", api.adminToken)
+		api.get("/api/v1/admin/drivers/" + other.driverId() + "/documents/" + doc + "/files/front/content", api.adminToken)
 			.expectStatus().isNotFound();
 		api.admin(other.driverId(), "documents/" + doc + "/approve", null).expectStatus().isNotFound();
 		api.get("/api/v1/drivers/me/documents", other.token()).expectStatus().isOk().expectBody().jsonPath("$.length()").isEqualTo(0);

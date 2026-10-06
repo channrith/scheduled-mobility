@@ -98,7 +98,7 @@ class AdminDriverController {
 		return views.detail(onboarding.startTraining(driverId), true);
 	}
 
-	@Operation(summary = "TRAINING → APPROVED", description = "Also requires an assigned vehicle with approved VEHICLE_REGISTRATION and VEHICLE_INSURANCE. The driver can then be dispatched.")
+	@Operation(summary = "TRAINING → APPROVED", description = "Also requires an assigned vehicle with an approved VEHICLE_REGISTRATION. The driver can then be dispatched.")
 	@PostMapping("/{driverId}/approve")
 	@PreAuthorize(ADMIN)
 	DriverDetail approve(@PathVariable UUID driverId) {
@@ -160,15 +160,19 @@ class AdminDriverController {
 	}
 
 	/** Streams the decrypted file for review. Every access is audited. */
-	@Operation(summary = "Download a document file", description = "Decrypted file. Every access is written to the audit log.")
+	@Operation(summary = "Download one side of a document",
+			description = "`side` is `front` or `back` (see the document's `files`). Decrypted file; every access is "
+					+ "written to the audit log.")
 	@ApiResponse(responseCode = "200", description = "The file", content = {
 			@Content(mediaType = "application/pdf", schema = @Schema(type = "string", format = "binary")),
 			@Content(mediaType = "image/jpeg", schema = @Schema(type = "string", format = "binary")),
 			@Content(mediaType = "image/png", schema = @Schema(type = "string", format = "binary")) })
-	@GetMapping("/{driverId}/documents/{documentId}/content")
+	@GetMapping("/{driverId}/documents/{documentId}/files/{side}/content")
 	@PreAuthorize(VIEW_DOCUMENTS)
-	ResponseEntity<byte[]> documentContent(@PathVariable UUID driverId, @PathVariable UUID documentId) {
-		StoredFile file = documents.content(driverId, documentId);
+	ResponseEntity<byte[]> documentContent(@PathVariable UUID driverId, @PathVariable UUID documentId,
+			@PathVariable @io.swagger.v3.oas.annotations.Parameter(schema = @Schema(allowableValues = { "front",
+					"back" })) String side) {
+		StoredFile file = documents.content(driverId, documentId, side);
 		return ResponseEntity.ok()
 			.contentType(MediaType.parseMediaType(file.contentType()))
 			.header(HttpHeaders.CONTENT_DISPOSITION,

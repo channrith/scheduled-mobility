@@ -150,7 +150,7 @@ PENDING ──submit──► DOCS_SUBMITTED ──training──► TRAINING �
 |---|---|---|
 | submit (`POST /drivers/me/submit`) | driver | NATIONAL_ID, DRIVING_LICENSE, PROFILE_PHOTO uploaded |
 | training | ADMIN | those documents approved and not expired |
-| approve | ADMIN | + assigned vehicle with approved VEHICLE_REGISTRATION and VEHICLE_INSURANCE |
+| approve | ADMIN | + assigned vehicle with an approved VEHICLE_REGISTRATION |
 | reject | ADMIN | reason (≥ 10 chars) |
 | suspend | ADMIN, SAFETY_OFFICER | APPROVED only; reason (≥ 10 chars); `noticeAt` = when the driver was notified (default now, not in the future) |
 | reinstate | ADMIN | reason; still meets every approval requirement |
@@ -165,11 +165,13 @@ Every transition writes `driver.driver_status_history`; staff actions write `aud
 | `POST …/{id}/suspend` `{reason, noticeAt?}` | ADMIN, SAFETY_OFFICER |
 | `POST/DELETE …/{id}/vehicle-assignment` `{vehicleId}` | ADMIN |
 | `POST …/{id}/documents/{docId}/approve` · `/reject` | ADMIN |
-| `GET …/{id}/documents/{docId}/content` (audited) | ADMIN, SAFETY_OFFICER |
+| `GET …/{id}/documents/{docId}/files/{front\|back}/content` (audited) | ADMIN, SAFETY_OFFICER |
 | `POST /api/v1/admin/vehicles`, `GET …/{id}` | ADMIN (create), staff (view) |
 | `GET /api/v1/drivers/me`, `GET/POST /api/v1/drivers/me/documents` (multipart), `POST …/submit` | DRIVER |
 
-Documents: JPEG, PNG or PDF (checked by content, not by the declared type), max 10 MB, encrypted at rest.
+Documents: JPEG, PNG or PDF (checked by content, not by the declared type), max 10 MB per side, encrypted at rest.
+NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided cards: upload `front` and `back` photos in one
+request, or a single PDF scan of both sides as `front`. A document is reviewed and expires as a whole.
 National ID and bank account numbers are encrypted in the database and always shown masked (`•••••5678`).
 A daily job (06:00 Phnom Penh, `driver.documents.expiry-check-cron`) flags approved documents expiring within
 30 days and publishes `DriverDocumentExpiringSoon` (the notification module will act on it).

@@ -12,9 +12,10 @@ spring:
     password: ${DB_PASSWORD}
   servlet:
     multipart:
-      # Documents are limited to 10 MB by the application (clear error code); these are the hard limits.
+      # Documents are limited to 10 MB per side by the application (clear error code); these are the
+      # hard limits. A request carries up to two sides. Keep deploy/staging/Caddyfile in line.
       max-file-size: 11MB
-      max-request-size: 12MB
+      max-request-size: 23MB
   messages:
     basename: i18n/shared,i18n/identity,i18n/driver
     fallback-to-system-locale: false

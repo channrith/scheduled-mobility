@@ -70,8 +70,10 @@ class DriverSelfController {
 	 * and {@code vehicleId} (for vehicle documents; must be the vehicle assigned to the driver).
 	 */
 	@Operation(summary = "Upload a document",
-			description = "JPEG, PNG or PDF (checked by content), max 10 MB, encrypted at rest. Replaces the current "
-					+ "document of the same type. PROFILE_PHOTO must be an image.")
+			description = "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the "
+					+ "current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are "
+					+ "two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. "
+					+ "PROFILE_PHOTO must be an image and has no back.")
 	@ProblemResponse(status = 413, description = "`document.too-large`: over 10 MB")
 	@PostMapping(path = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	ResponseEntity<DocumentView> upload(@Valid @ModelAttribute DocumentUpload form) throws IOException {
@@ -80,7 +82,7 @@ class DriverSelfController {
 			throw new ApiException(HttpStatus.CONFLICT, "document.upload-not-allowed");
 		}
 		DriverDocument document = documents.upload(driver.getId(), form.type(), form.vehicleId(), form.expiresOn(),
-				form.file() == null ? null : form.file().getBytes());
+				bytes(form.front()), bytes(form.back()));
 		return ResponseEntity.status(HttpStatus.CREATED).body(DocumentView.of(document, false));
 	}
 
@@ -96,6 +98,13 @@ class DriverSelfController {
 			@Schema(description = "Required for VEHICLE_* documents: the vehicle assigned to you") UUID vehicleId,
 			@Schema(description = "Required for documents that expire (all except PROFILE_PHOTO)")
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expiresOn,
-			@NotNull @Schema(type = "string", format = "binary") MultipartFile file) {
+			@NotNull @Schema(type = "string", format = "binary", description = "Front side (or a PDF of both sides)")
+			MultipartFile front,
+			@Schema(type = "string", format = "binary",
+					description = "Back side; required for two-sided documents unless `front` is a PDF") MultipartFile back) {
+	}
+
+	private static byte[] bytes(MultipartFile file) throws IOException {
+		return file == null ? null : file.getBytes();
 	}
 }

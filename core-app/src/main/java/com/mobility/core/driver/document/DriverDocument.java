@@ -2,19 +2,29 @@ package com.mobility.core.driver.document;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.mobility.core.shared.web.ApiException;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import org.springframework.http.HttpStatus;
 
-/** Metadata of an uploaded document. The file itself is in StorageService under {@link #getStorageKey()}. */
+/**
+ * An uploaded document (ID card, licence, ...): reviewed once and expiring once, with one file per side
+ * ({@link DocumentFile}).
+ */
 @Entity
 @Table(schema = "driver", name = "driver_documents")
 public class DriverDocument {
@@ -36,17 +46,8 @@ public class DriverDocument {
 	@Column(nullable = false)
 	private DocumentStatus status;
 
-	@Column(name = "storage_key", nullable = false, unique = true)
-	private String storageKey;
-
-	@Column(name = "content_type", nullable = false)
-	private String contentType;
-
-	@Column(name = "size_bytes", nullable = false)
-	private int sizeBytes;
-
-	@Column(nullable = false)
-	private byte[] sha256;
+	@OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+	private List<DocumentFile> files = new ArrayList<>();
 
 	@Column(name = "expires_on")
 	private LocalDate expiresOn;
@@ -72,19 +73,20 @@ public class DriverDocument {
 	protected DriverDocument() {
 	}
 
-	DriverDocument(UUID driverId, UUID vehicleId, DocumentType type, String contentType, int sizeBytes, byte[] sha256,
-			LocalDate expiresOn, Instant uploadedAt) {
+	DriverDocument(UUID driverId, UUID vehicleId, DocumentType type, LocalDate expiresOn, Instant uploadedAt) {
 		this.id = UUID.randomUUID();
 		this.driverId = driverId;
 		this.vehicleId = vehicleId;
 		this.type = type;
 		this.status = DocumentStatus.PENDING_REVIEW;
-		this.storageKey = "drivers/" + driverId + "/" + id;
-		this.contentType = contentType;
-		this.sizeBytes = sizeBytes;
-		this.sha256 = sha256;
 		this.expiresOn = expiresOn;
 		this.uploadedAt = uploadedAt;
+	}
+
+	DocumentFile addFile(DocumentSide side, String contentType, int sizeBytes, byte[] sha256) {
+		DocumentFile file = new DocumentFile(this, side, contentType, sizeBytes, sha256);
+		files.add(file);
+		return file;
 	}
 
 	void approve(UUID reviewer, Instant now, LocalDate today) {
@@ -139,16 +141,13 @@ public class DriverDocument {
 		return status;
 	}
 
-	public String getStorageKey() {
-		return storageKey;
+	/** Front first. */
+	public List<DocumentFile> getFiles() {
+		return files.stream().sorted(Comparator.comparing(DocumentFile::getSide)).toList();
 	}
 
-	public String getContentType() {
-		return contentType;
-	}
-
-	public int getSizeBytes() {
-		return sizeBytes;
+	public Optional<DocumentFile> file(DocumentSide side) {
+		return files.stream().filter(f -> f.getSide() == side).findFirst();
 	}
 
 	public LocalDate getExpiresOn() {
