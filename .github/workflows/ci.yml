@@ -64,9 +64,10 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
 
-  # On main only, after verify passed: one image per deployable, tagged with the commit SHA.
+  # On main only, after the backend and console checks passed: one image per deployable, tagged with the
+  # commit SHA.
   images:
-    needs: verify
+    needs: [verify, web-console]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -75,7 +76,19 @@ jobs:
       packages: write
     strategy:
       matrix:
-        module: [core-app, location-service]
+        include:
+          - module: core-app
+            context: .
+            dockerfile: Dockerfile
+            build-args: MODULE=core-app
+          - module: location-service
+            context: .
+            dockerfile: Dockerfile
+            build-args: MODULE=location-service
+          - module: web-console
+            context: web-console
+            dockerfile: web-console/Dockerfile
+            build-args: ''
     steps:
       - uses: actions/checkout@v4
 
@@ -97,8 +110,9 @@ jobs:
 
       - uses: docker/build-push-action@v7
         with:
-          context: .
-          build-args: MODULE=${{ matrix.module }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build-args }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

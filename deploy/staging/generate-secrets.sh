@@ -58,7 +58,7 @@ else
 	echo "  keep  JWT_PRIVATE_KEY / JWT_PUBLIC_KEY"
 fi
 
-if [[ -z "$(current API_HOST)" || -z "$(current LOCATION_HOST)" ]]; then
+if [[ -z "$(current API_HOST)" || -z "$(current LOCATION_HOST)" || -z "$(current CONSOLE_HOST)" ]]; then
 	# With a reserved IP, pass it as PUBLIC_IP: the metadata service only knows the droplet's own address.
 	ip=${PUBLIC_IP:-} source="PUBLIC_IP"
 	if [[ -z "$ip" ]]; then
@@ -69,10 +69,11 @@ if [[ -z "$(current API_HOST)" || -z "$(current LOCATION_HOST)" ]]; then
 		echo "Hosts (sslip.io for $ip, from $source):"
 		set_if_empty API_HOST "api.${ip//./-}.sslip.io"
 		set_if_empty LOCATION_HOST "loc.${ip//./-}.sslip.io"
+		set_if_empty CONSOLE_HOST "console.${ip//./-}.sslip.io"
 	fi
 fi
 
-required=(API_HOST LOCATION_HOST ACME_EMAIL BOOTSTRAP_ADMIN_PHONE)
+required=(API_HOST LOCATION_HOST CONSOLE_HOST ACME_EMAIL BOOTSTRAP_ADMIN_PHONE)
 if [[ "$(current STORAGE_TYPE)" == s3 ]]; then
 	required+=(STORAGE_S3_BUCKET STORAGE_S3_ACCESS_KEY STORAGE_S3_SECRET_KEY)
 fi

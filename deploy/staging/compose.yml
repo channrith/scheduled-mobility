@@ -27,6 +27,7 @@ services:
     environment:
       API_HOST: ${API_HOST:?set API_HOST in .env}
       LOCATION_HOST: ${LOCATION_HOST:?set LOCATION_HOST in .env}
+      CONSOLE_HOST: ${CONSOLE_HOST:?set CONSOLE_HOST in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -103,7 +104,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-    mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-256m}
+    mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-192m}
+    logging: *logging
+
+  # Admin web console (Next.js). Tokens stay in its httpOnly cookies; the browser only talks to the
+  # console, which calls core-app on the internal network. Secure cookies need HTTPS, which Caddy provides.
+  web-console:
+    image: ${IMAGE_REPOSITORY}/web-console:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      CORE_API_URL: http://core-app:8080
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      core-app:
+        condition: service_healthy
+    # Uploads pass through the console in memory (up to 24 MB per request): ~110 MB at rest, ~150 MB during one 14 MB upload.
+    mem_limit: ${WEB_CONSOLE_MEM_LIMIT:-256m}
     logging: *logging
 
   postgres:

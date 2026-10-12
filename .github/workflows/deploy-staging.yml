@@ -39,7 +39,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          for module in core-app location-service; do
+          for module in core-app location-service web-console; do
             docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$module:$TAG" >/dev/null \
               || { echo "::error::No $module image for $TAG. Did CI pass on main for this commit?"; exit 1; }
           done

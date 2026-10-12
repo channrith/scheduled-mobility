@@ -8,12 +8,14 @@ Staging runs everything on one DigitalOcean droplet with Docker Compose (`deploy
 | Reserved IP | `146.190.4.99` |
 | API | https://api.146-190-4-99.sslip.io (Swagger: `/swagger-ui.html`) |
 | Location service | https://loc.146-190-4-99.sslip.io |
+| Admin console | https://console.146-190-4-99.sslip.io (staff only; same test-data rule) |
 | Firewall | `mobility-staging-fw` (tag `staging`): inbound 22, 80, 443 only |
-| Images | `ghcr.io/channrith/scheduled-mobility/{core-app,location-service}:<commit SHA>`, built by CI on `main` |
+| Images | `ghcr.io/channrith/scheduled-mobility/{core-app,location-service,web-console}:<commit SHA>`, built by CI on `main` after the backend and console checks pass |
 | Server directory | `/opt/mobility`, owned by the `deploy` user. `.env` there holds every secret and exists nowhere else |
 
 **Test data only.** Staging sets `OTP_FIXED_CODE=1234`: anyone who knows a phone number can log in as that
-user, including the admin. Never enter real ID numbers, bank accounts or documents.
+user, including the admin. Never enter real ID numbers, bank accounts or documents, in the API or in the admin
+console. Real driver onboarding waits for a production environment.
 
 **No backups yet.** Until Spaces exists (see [Moving to Spaces](#moving-to-spaces)), documents live in a Docker
 volume and the database has no off-site copy. Destroying the droplet loses both.
@@ -111,13 +113,15 @@ the run starts from; CI must have passed on that commit (the job checks that bot
 The workflow syncs `deploy/staging/` to `/opt/mobility` (never touching `.env` or `backups/`) and runs
 `./deploy.sh <sha>`:
 
-1. Dump the database to `backups/pre-deploy-<UTC time>-<previous tag>.dump` (mode 600, last 5 kept). If the
+1. Check that `.env` has every value `compose.yml` needs (stops with the missing name, e.g. after a new host
+   was added). Then dump the database to `backups/pre-deploy-<UTC time>-<previous tag>.dump` (mode 600, last 5 kept). If the
    dump fails, nothing is changed.
-2. Pull, restart, and wait for both apps to be healthy (up to 5 minutes).
+2. Pull, restart, and wait for core-app, location-service and web-console to be healthy (one 5-minute budget
+   per attempt).
 3. Recreate Caddy or RabbitMQ when their config file (`Caddyfile`, `rabbitmq/20-staging.conf`) changed. A
    single bind-mounted file keeps pointing at the old copy after rsync replaces it, so without this a
    changed Caddyfile would never take effect.
-4. Check `https://<API_HOST>`.
+4. Check `https://<API_HOST>` and `https://<CONSOLE_HOST>/login`.
 
 If the apps do not become healthy, it switches back to the previous tag and the job fails, unless the new
 version applied database migrations: see [Failed deploy after a migration](#failed-deploy-after-a-migration).
@@ -189,6 +193,10 @@ first add the new column and write both, then drop the old one in a later releas
 
 **Reset all staging data** (database, Redis, RabbitMQ, documents, certificates): `docker compose down -v`,
 then deploy again. On the next start the admin is bootstrapped again. This cannot be undone.
+
+**Memory on 2 GB:** the limits add up to about 2.1 GB on purpose; actual use is about 1 GB, and swap covers
+peaks. The console's 256 MB is sized for uploads: two maximum-size two-sided uploads at once peaked at about
+200 MB. If containers restart with `Exited (137)` or swap stays busy, resize.
 
 **Resize to 4 GB:** power off, resize in DigitalOcean (CPU and RAM only, so it can be resized back), power
 on, then set the 4 GB values listed in `.env.staging.example` in `.env` and run `docker compose up -d`.

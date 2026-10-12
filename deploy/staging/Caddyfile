@@ -1,4 +1,4 @@
-# HTTPS for both apps. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
+# HTTPS for the API, the location service and the admin console. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
 # automatically. Hostnames are set in .env; without a domain use sslip.io, e.g. api.203-0-113-7.sslip.io.
 {
 	email {$ACME_EMAIL}
@@ -40,4 +40,20 @@
 	respond @actuator 404
 	# WebSocket upgrades are proxied automatically.
 	reverse_proxy location-service:8081
+}
+
+{$CONSOLE_HOST} {
+	import common
+	header {
+		# Spring adds HSTS for the API; Next.js does not, so Caddy adds it here.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Document previews are same-origin <img>/<iframe>; no other site may frame the console.
+		Content-Security-Policy "frame-ancestors 'self'"
+		X-Frame-Options SAMEORIGIN
+	}
+	# Two-sided document uploads pass through the console to core-app.
+	request_body {
+		max_size 24MB
+	}
+	reverse_proxy web-console:3000
 }
