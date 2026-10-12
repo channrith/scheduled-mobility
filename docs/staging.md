@@ -6,7 +6,7 @@ Staging runs everything on one DigitalOcean droplet with Docker Compose (`deploy
 |---|---|
 | Droplet | `mobility-staging-01`, SGP1, Ubuntu 24.04, 1 vCPU / 2 GB, tags `mobility`, `staging` |
 | Reserved IP | `146.190.4.99` |
-| API | https://api.146-190-4-99.sslip.io (Swagger: `/swagger-ui.html`) |
+| API | https://api.146-190-4-99.sslip.io (Swagger is off: `API_DOCS_ENABLED=false`; use the local profile's http://localhost:8080/swagger-ui.html) |
 | Location service | https://loc.146-190-4-99.sslip.io |
 | Admin console | https://console.146-190-4-99.sslip.io (staff only; same test-data rule) |
 | Firewall | `mobility-staging-fw` (tag `staging`): inbound 22, 80, 443 only |

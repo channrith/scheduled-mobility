@@ -70,7 +70,8 @@ services:
       STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-}
       STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:-}
       STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:-}
-      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      # Off by default: a public spec maps out the admin API. true = Swagger UI on this host.
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}
       # Heap share of mem_limit; the rest is metaspace, threads and buffers (~200 MB).
       JAVA_TOOL_OPTIONS: ${CORE_APP_JAVA_OPTS:--XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError}
     volumes:
