@@ -162,7 +162,7 @@ public class DriverApi {
 	}
 
 	public void assignVehicle(UUID driverId, UUID vehicleId) {
-		admin(driverId, "vehicle-assignment", Map.of("vehicleId", vehicleId)).expectStatus().isOk();
+		admin(driverId, "vehicle-assignments", Map.of("vehicleId", vehicleId)).expectStatus().isOk();
 	}
 
 	/** Takes a new driver through the whole onboarding to APPROVED, with an assigned vehicle. */
@@ -178,6 +178,29 @@ public class DriverApi {
 				SampleFiles.png(), inOneYear(), vehicle));
 		admin(driver.driverId(), "approve", null).expectStatus().isOk();
 		return driver;
+	}
+
+	/** Asks for a signed preview link; {@code token} decides who asks. */
+	public RestTestClient.ResponseSpec previewUrl(UUID driverId, UUID documentId, String side, String token) {
+		return post("/api/v1/admin/drivers/" + driverId + "/documents/" + documentId + "/files/" + side + "/preview-url",
+				token, null);
+	}
+
+	/** Opens a preview link without any credentials, like a browser image tag would. */
+	public RestTestClient.ResponseSpec openPreview(String url) {
+		return client.get().uri(url).exchange();
+	}
+
+	/** Issues a preview link as ADMIN and downloads it. */
+	public byte[] preview(UUID driverId, UUID documentId, String side) {
+		String url = previewUrl(driverId, documentId, side, adminToken).expectStatus()
+			.isOk()
+			.expectBody(JsonNode.class)
+			.returnResult()
+			.getResponseBody()
+			.get("url")
+			.asString();
+		return openPreview(url).expectStatus().isOk().expectBody(byte[].class).returnResult().getResponseBody();
 	}
 
 	public JsonNode detail(UUID driverId) {

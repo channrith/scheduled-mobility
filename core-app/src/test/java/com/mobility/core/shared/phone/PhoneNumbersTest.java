@@ -1,4 +1,4 @@
-package com.mobility.core.identity.otp;
+package com.mobility.core.shared.phone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

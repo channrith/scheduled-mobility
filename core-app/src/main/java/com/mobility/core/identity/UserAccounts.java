@@ -2,6 +2,8 @@ package com.mobility.core.identity;
 
 import java.util.UUID;
 
+import com.mobility.core.shared.i18n.Language;
+
 /** Staff-side account management for other modules (e.g. driver onboarding creates the driver's login). */
 public interface UserAccounts {
 
@@ -15,4 +17,10 @@ public interface UserAccounts {
 	 * @throws com.mobility.core.shared.web.ApiException 400 {@code phone.invalid}
 	 */
 	UserAccount ensureUserWithRole(String phone, String fullName, Role role);
+
+	/**
+	 * Staff edit of a user's profile; {@code null} leaves a field unchanged. Must run in the caller's
+	 * transaction; audited with the changed field names.
+	 */
+	void updateProfile(UUID userId, String fullName, Language preferredLanguage);
 }

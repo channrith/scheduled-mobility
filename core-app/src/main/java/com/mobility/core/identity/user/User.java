@@ -90,6 +90,14 @@ public class User {
 		return false;
 	}
 
+	public void changeFullName(String fullName) {
+		this.fullName = fullName;
+	}
+
+	public void changePreferredLang(Language preferredLang) {
+		this.preferredLang = preferredLang;
+	}
+
 	public void setFullNameIfMissing(String fullName) {
 		if (this.fullName == null || this.fullName.isBlank()) {
 			this.fullName = fullName;

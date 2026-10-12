@@ -98,7 +98,7 @@ class OpenApiIT {
 
 	@Test
 	void documentDownloadDeclaresFileTypes() {
-		JsonNode content = operation("/api/v1/admin/drivers/{driverId}/documents/{documentId}/files/{side}/content", "get")
+		JsonNode content = operation("/api/v1/document-previews/{token}", "get")
 			.at("/responses/200/content");
 
 		assertThat(content.propertyNames()).containsExactlyInAnyOrder("application/pdf", "image/jpeg", "image/png");

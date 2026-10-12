@@ -1,4 +1,4 @@
-package com.mobility.core.identity.otp;
+package com.mobility.core.shared.phone;
 
 import java.util.Optional;
 import java.util.regex.Pattern;

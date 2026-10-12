@@ -29,3 +29,6 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+web-console:
+  allowed-origins: http://localhost:3000

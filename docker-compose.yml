@@ -48,6 +48,19 @@ services:
       timeout: 10s
       retries: 10
 
+  # Admin web console (Next.js). core-app runs on the host (./mvnw spring-boot:run), reached via
+  # host.docker.internal. For day-to-day frontend work `npm run dev` in web-console/ is faster.
+  web-console:
+    build: ./web-console
+    environment:
+      CORE_API_URL: ${CORE_API_URL:-http://host.docker.internal:8080}
+      # Plain http on localhost: session cookies cannot be marked Secure.
+      COOKIE_INSECURE: "true"
+    ports:
+      - "${WEB_CONSOLE_PORT:-3000}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   postgres-data:
   redis-data:

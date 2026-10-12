@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.mobility.core.driver.DriverStatus;
+import com.mobility.core.driver.HomeZone;
 import com.mobility.core.shared.crypto.EncryptedString;
 import com.mobility.core.shared.web.ApiException;
 import jakarta.persistence.Column;
@@ -82,6 +83,17 @@ public class Driver {
 	@Column(name = "national_id_hash")
 	private byte[] nationalIdHash;
 
+	@Convert(converter = EncryptedString.class)
+	@Column(name = "license_number_enc")
+	private String licenseNumber;
+
+	@Column(name = "license_number_hash")
+	private byte[] licenseNumberHash;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "home_zone")
+	private HomeZone homeZone;
+
 	@Column(name = "bank_name")
 	private String bankName;
 
@@ -130,6 +142,19 @@ public class Driver {
 	void setNationalId(String normalizedNationalId, byte[] nationalIdHash) {
 		this.nationalId = normalizedNationalId;
 		this.nationalIdHash = nationalIdHash;
+	}
+
+	void setLicenseNumber(String normalizedLicenseNumber, byte[] licenseNumberHash) {
+		this.licenseNumber = normalizedLicenseNumber;
+		this.licenseNumberHash = licenseNumberHash;
+	}
+
+	void changeFullName(String fullName) {
+		this.fullName = fullName;
+	}
+
+	void changeHomeZone(HomeZone homeZone) {
+		this.homeZone = homeZone;
 	}
 
 	void setBankAccount(String bankName, String accountName, String normalizedAccountNumber) {
@@ -276,6 +301,19 @@ public class Driver {
 
 	public String getNationalId() {
 		return nationalId;
+	}
+
+	public String getLicenseNumber() {
+		return licenseNumber;
+	}
+
+	public HomeZone getHomeZone() {
+		return homeZone;
+	}
+
+	/** Optimistic-lock version; clients send it back when editing. */
+	public Long getVersion() {
+		return version;
 	}
 
 	public String getBankName() {

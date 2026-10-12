@@ -45,6 +45,16 @@ public class Vehicle {
 	@Column(nullable = false)
 	private VehicleStatus status;
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private VehicleOwnership ownership;
+
+	@Column(name = "owner_name")
+	private String ownerName;
+
+	@Column(name = "owner_phone")
+	private String ownerPhone;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
@@ -70,6 +80,29 @@ public class Vehicle {
 		this.modelYear = modelYear;
 		this.seats = seats;
 		this.status = VehicleStatus.ACTIVE;
+		this.ownership = VehicleOwnership.DRIVER;
+	}
+
+	void update(String plateNumber, VehicleClass vehicleClass, String make, String model, String color,
+			Short modelYear, short seats) {
+		this.plateNumber = normalizePlate(plateNumber);
+		this.vehicleClass = vehicleClass;
+		this.make = make;
+		this.model = model;
+		this.color = color;
+		this.modelYear = modelYear;
+		this.seats = seats;
+	}
+
+	/** @param ownerPhone already normalized to E.164 */
+	void changeOwner(VehicleOwnership ownership, String ownerName, String ownerPhone) {
+		this.ownership = ownership;
+		this.ownerName = ownership == VehicleOwnership.DRIVER ? null : ownerName;
+		this.ownerPhone = ownership == VehicleOwnership.DRIVER ? null : ownerPhone;
+	}
+
+	void changeStatus(VehicleStatus status) {
+		this.status = status;
 	}
 
 	/** Uppercase with single spaces, e.g. {@code "pp  2ab-1234"} → {@code "PP 2AB-1234"}. */
@@ -111,5 +144,21 @@ public class Vehicle {
 
 	public VehicleStatus getStatus() {
 		return status;
+	}
+
+	public VehicleOwnership getOwnership() {
+		return ownership;
+	}
+
+	public String getOwnerName() {
+		return ownerName;
+	}
+
+	public String getOwnerPhone() {
+		return ownerPhone;
+	}
+
+	public Long getVersion() {
+		return version;
 	}
 }

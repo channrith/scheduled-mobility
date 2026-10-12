@@ -9,6 +9,7 @@ with scheduled rides and airport transfers. See [CLAUDE.md](CLAUDE.md) for archi
 |---------------------|-----------------------------------------------------------------------------------|
 | `core-app/`         | Spring Boot modular monolith (Spring Modulith). One package per module under `com.mobility.core`. |
 | `location-service/` | Separate deployable for driver GPS pings and WebSocket live location.             |
+| `web-console/`      | Next.js operations console (driver onboarding today). See `web-console/README.md`. |
 | `docker-compose.yml`| Local PostgreSQL 16 + PostGIS, Redis, RabbitMQ.                                   |
 
 Modules in `core-app`: `identity`, `driver`, `corporate`, `place`, `pricing`, `booking`,
@@ -71,6 +72,7 @@ API docs on. For any environment other than `local`, set these variables:
 | `STORAGE_TYPE` | `local` (default) or `s3`. Documents are encrypted by the app before they reach either backend |
 | `STORAGE_LOCAL_DIR` | `local`: where uploaded documents are stored (default `./var/storage`, git-ignored) |
 | `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`, `STORAGE_S3_BUCKET`, `STORAGE_S3_ACCESS_KEY`, `STORAGE_S3_SECRET_KEY` | `s3`: any S3-compatible store, e.g. endpoint `https://sgp1.digitaloceanspaces.com`, region `sgp1`. Endpoint empty = AWS S3. The bucket must exist and be private |
+| `WEB_CONSOLE_ORIGINS` | Browser origins allowed by CORS (comma-separated). Local profile: `http://localhost:3000`; none elsewhere |
 | `SERVER_PORT` | HTTP port (default 8080 core-app, 8081 location-service) |
 
 Generate JWT keys (`*.pem` is git-ignored):
@@ -178,6 +180,28 @@ A daily job (06:00 Phnom Penh, `driver.documents.expiry-check-cron`) flags appro
 
 To try it locally you need an ADMIN: start the app once with `BOOTSTRAP_ADMIN_PHONE=012000001`, then log in
 with that phone.
+
+## Web console
+
+```bash
+cd web-console && npm install && npm run dev      # http://localhost:3000, talks to core-app on :8080
+```
+or `docker compose up -d web-console` (core-app still runs on the host). Sign in with a staff phone
+number; with the `local` profile the code appears in the core-app log. Pages: drivers (search and
+filters), register driver (in-person wizard with camera capture), driver detail (documents with signed
+previews, vehicles, history, audit trail, onboarding actions), document review queue, vehicles. The
+browser only talks to the console's own server, which holds the tokens in httpOnly cookies.
+
+| Endpoint added for the console | Roles |
+|---|---|
+| `PATCH /api/v1/admin/drivers/{id}` (with `version`) | ADMIN |
+| `GET /api/v1/admin/drivers?status&vehicleClass&expiringSoon&q` | staff |
+| `POST /api/v1/admin/drivers/{id}/submit-documents` · `POST …/{id}/documents` (multipart) | ADMIN |
+| `POST/DELETE /api/v1/admin/drivers/{id}/vehicle-assignments[/{assignmentId}]` (`validFrom`/`validTo`) | ADMIN |
+| `POST …/documents/{docId}/files/{side}/preview-url` → 5-minute signed link | ADMIN, SAFETY_OFFICER |
+| `GET /api/v1/admin/drivers/{id}/audit` | ADMIN, SAFETY_OFFICER |
+| `GET /api/v1/admin/documents` (review queue) | ADMIN |
+| `GET /api/v1/admin/vehicles`, `PUT /api/v1/admin/vehicles/{id}` | staff / ADMIN |
 
 ## API documentation
 

@@ -30,6 +30,9 @@ pii:
   encryption-key: ${PII_ENCRYPTION_KEY:bG9jYWwtZGV2LXBpaS1lbmNyeXB0aW9uLWtleS0zMmI=}
   hash-secret: ${PII_HASH_SECRET:local-dev-pii-hash-secret-change-me-0123}
 
+web-console:
+  allowed-origins: ${WEB_CONSOLE_ORIGINS:http://localhost:3000}
+
 springdoc:
   api-docs:
     enabled: ${API_DOCS_ENABLED:true}

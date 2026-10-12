@@ -3,7 +3,7 @@ package com.mobility.core.identity.auth;
 import java.util.Locale;
 
 import com.mobility.core.identity.otp.OtpService;
-import com.mobility.core.identity.otp.PhoneNumbers;
+import com.mobility.core.shared.phone.PhoneNumbers;
 import com.mobility.core.identity.token.AccessTokenIssuer;
 import com.mobility.core.identity.token.AccessTokenIssuer.AccessToken;
 import com.mobility.core.identity.token.RefreshTokenService;

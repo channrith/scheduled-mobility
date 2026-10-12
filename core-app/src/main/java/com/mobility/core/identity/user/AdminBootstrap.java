@@ -6,7 +6,7 @@ import com.mobility.core.audit.AuditLog;
 import com.mobility.core.identity.Role;
 import com.mobility.core.identity.UserAccounts;
 import com.mobility.core.identity.UserAccounts.UserAccount;
-import com.mobility.core.identity.otp.PhoneNumbers;
+import com.mobility.core.shared.phone.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

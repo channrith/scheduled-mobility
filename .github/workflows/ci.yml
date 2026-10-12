@@ -35,6 +35,35 @@ jobs:
             **/target/surefire-reports/
             **/target/failsafe-reports/
 
+  web-console:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web-console
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-console/package-lock.json
+
+      - run: npm ci
+
+      # The API types must match the committed OpenAPI snapshot (docs/openapi.json).
+      - name: API types up to date
+        run: npm run gen:api && git diff --exit-code src/lib/api/schema.ts
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
   # On main only, after verify passed: one image per deployable, tagged with the commit SHA.
   images:
     needs: verify

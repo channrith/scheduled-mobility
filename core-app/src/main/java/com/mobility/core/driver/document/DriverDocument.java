@@ -55,6 +55,10 @@ public class DriverDocument {
 	@Column(name = "uploaded_at", nullable = false)
 	private Instant uploadedAt;
 
+	/** Staff member who uploaded on the driver's behalf; null when the driver uploaded it. */
+	@Column(name = "uploaded_by")
+	private UUID uploadedBy;
+
 	@Column(name = "reviewed_by")
 	private UUID reviewedBy;
 
@@ -73,7 +77,9 @@ public class DriverDocument {
 	protected DriverDocument() {
 	}
 
-	DriverDocument(UUID driverId, UUID vehicleId, DocumentType type, LocalDate expiresOn, Instant uploadedAt) {
+	DriverDocument(UUID driverId, UUID vehicleId, DocumentType type, LocalDate expiresOn, Instant uploadedAt,
+			UUID uploadedBy) {
+		this.uploadedBy = uploadedBy;
 		this.id = UUID.randomUUID();
 		this.driverId = driverId;
 		this.vehicleId = vehicleId;
@@ -156,6 +162,10 @@ public class DriverDocument {
 
 	public Instant getUploadedAt() {
 		return uploadedAt;
+	}
+
+	public UUID getUploadedBy() {
+		return uploadedBy;
 	}
 
 	public UUID getReviewedBy() {

@@ -171,20 +171,26 @@ class DocumentIT {
 	}
 
 	@Test
-	void staffCanDownloadTheDecryptedFileAndEveryViewIsAudited() {
+	void staffGetASignedPreviewLinkAndEveryLinkIsAudited() {
 		UUID doc = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), null);
-		String path = "/api/v1/admin/drivers/" + driver.driverId() + "/documents/" + doc + "/files/front/content";
 
-		byte[] content = api.get(path, api.adminToken)
+		JsonNode link = api.previewUrl(driver.driverId(), doc, "front", api.adminToken)
+			.expectStatus().isOk().expectBody(JsonNode.class).returnResult().getResponseBody();
+		String url = link.get("url").asString();
+		assertThat(url).startsWith("/api/v1/document-previews/").doesNotContain("drivers/").doesNotContain(doc.toString());
+		assertThat(link.get("expiresAt").asString()).isNotBlank();
+
+		byte[] content = api.openPreview(url)
 			.expectStatus().isOk()
 			.expectHeader().contentType(MediaType.APPLICATION_PDF)
-			.expectHeader().valueEquals("Cache-Control", "no-store")
+			.expectHeader().value("Cache-Control", v -> assertThat(v).contains("no-store"))
+			.expectHeader().valueEquals("Referrer-Policy", "no-referrer")
 			.expectBody(byte[].class).returnResult().getResponseBody();
 		assertThat(content).isEqualTo(SampleFiles.pdf());
 
-		api.get(path, api.tokenFor(Role.SAFETY_OFFICER)).expectStatus().isOk();
-		api.get(path, api.tokenFor(Role.DISPATCHER)).expectStatus().isForbidden();
-		api.get(path, driver.token()).expectStatus().isForbidden();
+		api.previewUrl(driver.driverId(), doc, "front", api.tokenFor(Role.SAFETY_OFFICER)).expectStatus().isOk();
+		api.previewUrl(driver.driverId(), doc, "front", api.tokenFor(Role.DISPATCHER)).expectStatus().isForbidden();
+		api.previewUrl(driver.driverId(), doc, "front", driver.token()).expectStatus().isForbidden();
 		assertThat(auditActions(doc)).containsExactly("driver.document.viewed", "driver.document.viewed");
 	}
 
@@ -193,8 +199,7 @@ class DocumentIT {
 		UUID doc = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), null);
 		Registered other = api.register();
 
-		api.get("/api/v1/admin/drivers/" + other.driverId() + "/documents/" + doc + "/files/front/content", api.adminToken)
-			.expectStatus().isNotFound();
+		api.previewUrl(other.driverId(), doc, "front", api.adminToken).expectStatus().isNotFound();
 		api.admin(other.driverId(), "documents/" + doc + "/approve", null).expectStatus().isNotFound();
 		api.get("/api/v1/drivers/me/documents", other.token()).expectStatus().isOk().expectBody().jsonPath("$.length()").isEqualTo(0);
 	}

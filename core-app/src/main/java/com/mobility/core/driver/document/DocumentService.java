@@ -5,6 +5,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -17,6 +19,9 @@ import com.mobility.core.identity.CurrentUserProvider;
 import com.mobility.core.shared.storage.StorageService;
 import com.mobility.core.shared.time.BusinessTime;
 import com.mobility.core.shared.web.ApiException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +33,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class DocumentService {
 
 	public static final int MAX_BYTES = 10 * 1024 * 1024;
+
+	/** Same window as the daily expiry job (driver.documents.expiry-warning-days). */
+	static final int EXPIRY_WARNING_DAYS = 30;
 
 	static final int MIN_REASON_LENGTH = 10;
 
@@ -66,10 +74,12 @@ public class DocumentService {
 	 * Stores a new document, replacing (superseding) the current one of the same type. Two-sided documents
 	 * need a {@code back} photo unless {@code front} is a PDF (a scan of both sides). The caller has already
 	 * checked that the driver may upload.
+	 *
+	 * @param uploadedBy staff member uploading on the driver's behalf; null when the driver uploads
 	 */
 	@Transactional
 	public DriverDocument upload(UUID driverId, DocumentType type, UUID vehicleId, LocalDate expiresOn, byte[] front,
-			byte[] back) {
+			byte[] back, UUID uploadedBy) {
 		String frontType = checkFile(type, front);
 		String backType = null;
 		if (back != null) {
@@ -89,7 +99,7 @@ public class DocumentService {
 			// Flush before inserting the replacement: only one current document per type is allowed.
 			documents.saveAndFlush(previous);
 		});
-		DriverDocument document = new DriverDocument(driverId, vehicleId, type, expiry, clock.instant());
+		DriverDocument document = new DriverDocument(driverId, vehicleId, type, expiry, clock.instant(), uploadedBy);
 		List<StoredSide> stored = new ArrayList<>();
 		stored.add(new StoredSide(document.addFile(DocumentSide.FRONT, frontType, front.length, sha256(front)), front));
 		if (back != null) {
@@ -99,6 +109,10 @@ public class DocumentService {
 		for (StoredSide side : stored) {
 			storage.put(side.file().getStorageKey(), side.content());
 			deleteFileIfRolledBack(side.file().getStorageKey());
+		}
+		if (uploadedBy != null) {
+			auditLog.record("driver.document.uploaded", "driver_document", document.getId(), Map.of("driverId",
+					driverId, "type", type, "sides", stored.stream().map(s -> s.file().getSide().name()).toList()));
 		}
 		return document;
 	}
@@ -143,17 +157,44 @@ public class DocumentService {
 		return document;
 	}
 
-	/** Staff access to one side of a document. Viewing ID scans is audited. */
-	@Transactional
-	public StoredFile content(UUID driverId, UUID documentId, String side) {
+	/** The review queue and other cross-driver lists, oldest upload first. */
+	@Transactional(readOnly = true)
+	public Page<DriverDocument> page(DocumentStatus status, DocumentType type, int page, int size) {
+		return documents.findByFilters(status, type,
+				PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, 100), Sort.by("uploadedAt", "id")));
+	}
+
+	/**
+	 * Drivers (of {@code driverIds}) with an approved current document that has expired or expires within
+	 * the warning window.
+	 */
+	@Transactional(readOnly = true)
+	public Set<UUID> driversWithExpiringDocuments(Collection<UUID> driverIds) {
+		if (driverIds.isEmpty()) {
+			return Set.of();
+		}
+		return Set.copyOf(documents.findDriversWithApprovedExpiringBy(driverIds,
+				BusinessTime.today(clock).plusDays(EXPIRY_WARNING_DAYS)));
+	}
+
+	/** Checks that a side exists; used before issuing a preview URL. */
+	@Transactional(readOnly = true)
+	public DocumentFile requireFile(UUID driverId, UUID documentId, String side) {
 		DriverDocument document = find(driverId, documentId);
-		DocumentFile file = DocumentSide.parse(side)
+		return DocumentSide.parse(side)
 			.flatMap(document::file)
+			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "document.not-found"));
+	}
+
+	/** Decrypted content of one side. Callers authorize and audit (see DocumentPreviews). */
+	@Transactional(readOnly = true)
+	StoredFile content(UUID documentId, DocumentSide side) {
+		DriverDocument document = documents.findById(documentId)
+			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "document.not-found"));
+		DocumentFile file = document.file(side)
 			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "document.not-found"));
 		byte[] content = storage.get(file.getStorageKey())
 			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "document.not-found"));
-		auditLog.record("driver.document.viewed", "driver_document", documentId,
-				Map.of("driverId", driverId, "type", document.getType(), "side", file.getSide()));
 		String filename = document.getType().name().toLowerCase(java.util.Locale.ROOT) + "-"
 				+ file.getSide().name().toLowerCase(java.util.Locale.ROOT) + "-" + documentId + "."
 				+ FileTypes.extension(file.getContentType());

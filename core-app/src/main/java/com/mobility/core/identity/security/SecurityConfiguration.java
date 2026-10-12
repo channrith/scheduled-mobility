@@ -2,9 +2,14 @@ package com.mobility.core.identity.security;
 
 import com.mobility.core.identity.token.AccessTokenIssuer;
 import com.mobility.core.shared.web.Problems;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,6 +20,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /** Stateless JWT security for the whole API. 401/403 are rendered as problem+json. */
 @Configuration(proxyBeanMethods = false)
@@ -24,13 +32,16 @@ class SecurityConfiguration {
 	@Bean
 	SecurityFilterChain apiSecurity(HttpSecurity http, AuthenticationEntryPoint entryPoint,
 			AccessDeniedHandler accessDeniedHandler) throws Exception {
-		http.csrf(AbstractHttpConfigurer::disable)
+		http.cors(Customizer.withDefaults())
+			.csrf(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
 			.logout(AbstractHttpConfigurer::disable)
 			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/v1/auth/**").permitAll()
+				// Signed, short-lived document links: the token in the URL is the authorization.
+				.requestMatchers(HttpMethod.GET, "/api/v1/document-previews/*").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				.requestMatchers("/error").permitAll()
 				// Only exist when springdoc is enabled (local profile or API_DOCS_ENABLED=true).
@@ -42,6 +53,27 @@ class SecurityConfiguration {
 				.accessDeniedHandler(accessDeniedHandler))
 			.exceptionHandling(ex -> ex.authenticationEntryPoint(entryPoint).accessDeniedHandler(accessDeniedHandler));
 		return http.build();
+	}
+
+	/**
+	 * Browser origins allowed to call the API directly ({@code web-console.allowed-origins},
+	 * WEB_CONSOLE_ORIGINS). Empty by default: the web console calls the API from its server side.
+	 */
+	@Bean
+	CorsConfigurationSource corsConfigurationSource(
+			@Value("${web-console.allowed-origins:}") List<String> allowedOrigins) {
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		List<String> origins = allowedOrigins.stream().map(String::strip).filter(o -> !o.isEmpty()).toList();
+		if (!origins.isEmpty()) {
+			CorsConfiguration config = new CorsConfiguration();
+			config.setAllowedOrigins(origins);
+			config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+			config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept-Language", "Idempotency-Key"));
+			config.setExposedHeaders(List.of("Location", "Retry-After", "Idempotent-Replayed"));
+			config.setMaxAge(3600L);
+			source.registerCorsConfiguration("/api/**", config);
+		}
+		return source;
 	}
 
 	/** Maps the {@code roles} claim to {@code ROLE_*} authorities; principal name is the user id. */

@@ -16,5 +16,11 @@ public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
 	boolean existsByNationalIdHash(byte[] nationalIdHash);
 
+	boolean existsByLicenseNumberHash(byte[] licenseNumberHash);
+
+	boolean existsByNationalIdHashAndIdNot(byte[] nationalIdHash, UUID id);
+
+	boolean existsByLicenseNumberHashAndIdNot(byte[] licenseNumberHash, UUID id);
+
 	Page<Driver> findByStatus(DriverStatus status, Pageable pageable);
 }

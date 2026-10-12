@@ -68,7 +68,7 @@ class VehicleIT {
 		Registered driver = api.register();
 		UUID vehicle = api.registerVehicle("MOTO");
 
-		api.admin(driver.driverId(), "vehicle-assignment", Map.of("vehicleId", vehicle))
+		api.admin(driver.driverId(), "vehicle-assignments", Map.of("vehicleId", vehicle))
 			.expectStatus().isOk()
 			.expectBody()
 			.jsonPath("$.vehicle.id").isEqualTo(vehicle.toString())
@@ -86,10 +86,10 @@ class VehicleIT {
 		UUID vehicle = api.registerVehicle("CAR");
 		api.assignVehicle(first.driverId(), vehicle);
 
-		api.admin(second.driverId(), "vehicle-assignment", Map.of("vehicleId", vehicle))
+		api.admin(second.driverId(), "vehicle-assignments", Map.of("vehicleId", vehicle))
 			.expectStatus().isEqualTo(409).expectBody().jsonPath("$.code").isEqualTo("vehicle.already-assigned");
 		// Re-assigning to the same driver is a no-op.
-		api.admin(first.driverId(), "vehicle-assignment", Map.of("vehicleId", vehicle)).expectStatus().isOk();
+		api.admin(first.driverId(), "vehicle-assignments", Map.of("vehicleId", vehicle)).expectStatus().isOk();
 	}
 
 	@Test
@@ -103,7 +103,7 @@ class VehicleIT {
 
 		assertThat(api.detail(driver.driverId()).get("vehicle").get("id").asString()).isEqualTo(newVehicle.toString());
 		assertThat(jdbc.queryForObject(
-				"SELECT unassigned_at IS NOT NULL FROM driver.driver_vehicle_assignments WHERE vehicle_id = ?",
+				"SELECT valid_to IS NOT NULL FROM driver.driver_vehicle_assignments WHERE vehicle_id = ?",
 				Boolean.class, oldVehicle)).isTrue();
 		api.assignVehicle(api.register().driverId(), oldVehicle);
 	}
@@ -112,26 +112,30 @@ class VehicleIT {
 	void unassign() {
 		Registered driver = api.register();
 		api.assignVehicle(driver.driverId(), api.registerVehicle("VAN"));
+		String assignment = api.detail(driver.driverId()).at("/vehicleAssignments/0/id").asString();
+		String path = "/api/v1/admin/drivers/" + driver.driverId() + "/vehicle-assignments/" + assignment;
 
 		client.delete()
-			.uri("/api/v1/admin/drivers/" + driver.driverId() + "/vehicle-assignment")
+			.uri(path)
 			.header("Authorization", "Bearer " + api.adminToken)
 			.exchange()
 			.expectStatus().isOk()
-			.expectBody().jsonPath("$.vehicle").isEmpty();
+			.expectBody()
+			.jsonPath("$.vehicle").isEmpty()
+			.jsonPath("$.vehicleAssignments[0].active").isEqualTo(false);
 		client.delete()
-			.uri("/api/v1/admin/drivers/" + driver.driverId() + "/vehicle-assignment")
+			.uri(path)
 			.header("Authorization", "Bearer " + api.adminToken)
 			.exchange()
 			.expectStatus().isEqualTo(409)
-			.expectBody().jsonPath("$.code").isEqualTo("vehicle.not-assigned");
+			.expectBody().jsonPath("$.code").isEqualTo("vehicle.assignment-ended");
 	}
 
 	@Test
 	void unknownVehicleOrDriverIs404() {
-		api.admin(api.register().driverId(), "vehicle-assignment", Map.of("vehicleId", UUID.randomUUID()))
+		api.admin(api.register().driverId(), "vehicle-assignments", Map.of("vehicleId", UUID.randomUUID()))
 			.expectStatus().isNotFound().expectBody().jsonPath("$.code").isEqualTo("vehicle.not-found");
-		api.admin(UUID.randomUUID(), "vehicle-assignment", Map.of("vehicleId", api.registerVehicle("CAR")))
+		api.admin(UUID.randomUUID(), "vehicle-assignments", Map.of("vehicleId", api.registerVehicle("CAR")))
 			.expectStatus().isNotFound().expectBody().jsonPath("$.code").isEqualTo("driver.not-found");
 	}
 }

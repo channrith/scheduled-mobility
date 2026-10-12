@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
@@ -113,11 +112,9 @@ class TwoSidedDocumentIT {
 		byte[] front = SampleFiles.jpeg();
 		byte[] back = SampleFiles.png();
 		UUID doc = api.uploadOk(driver.token(), "NATIONAL_ID", front, back, DriverApi.inOneYear(), null);
-		String base = "/api/v1/admin/drivers/" + driver.driverId() + "/documents/" + doc + "/files/";
-
-		assertThat(download(base + "front", MediaType.IMAGE_JPEG)).isEqualTo(front);
-		assertThat(download(base + "BACK", MediaType.IMAGE_PNG)).isEqualTo(back);
-		api.get(base + "side/content", api.adminToken).expectStatus().isNotFound();
+		assertThat(api.preview(driver.driverId(), doc, "front")).isEqualTo(front);
+		assertThat(api.preview(driver.driverId(), doc, "BACK")).isEqualTo(back);
+		api.previewUrl(driver.driverId(), doc, "side", api.adminToken).expectStatus().isNotFound();
 
 		assertThat(jdbc.queryForList("""
 				SELECT details->>'side' FROM audit.audit_logs
@@ -129,8 +126,8 @@ class TwoSidedDocumentIT {
 	void pdfDocumentHasNoBackToDownload() {
 		UUID doc = api.uploadOk(driver.token(), "DRIVING_LICENSE", SampleFiles.pdf(), DriverApi.inOneYear(), null);
 
-		api.get("/api/v1/admin/drivers/" + driver.driverId() + "/documents/" + doc + "/files/back/content",
-				api.adminToken).expectStatus().isNotFound().expectBody().jsonPath("$.code").isEqualTo("document.not-found");
+		api.previewUrl(driver.driverId(), doc, "back", api.adminToken)
+			.expectStatus().isNotFound().expectBody().jsonPath("$.code").isEqualTo("document.not-found");
 	}
 
 	@Test
@@ -158,10 +155,4 @@ class TwoSidedDocumentIT {
 			.expectStatus().isOk().expectBody().jsonPath("$.status").isEqualTo("APPROVED").jsonPath("$.files.length()").isEqualTo(2);
 	}
 
-	private byte[] download(String sidePath, MediaType expected) {
-		return api.get(sidePath + "/content", api.adminToken)
-			.expectStatus().isOk()
-			.expectHeader().contentType(expected)
-			.expectBody(byte[].class).returnResult().getResponseBody();
-	}
 }
