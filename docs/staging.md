@@ -86,7 +86,7 @@ Then delete the local copies: `rm staging-deploy-key staging-deploy-key.pub stag
 From the repository root on your machine, copy the bundle (later deploys sync it automatically):
 
 ```bash
-rsync -rlptv --exclude '.env' deploy/staging/ root@146.190.4.99:/opt/mobility/
+rsync -rlptv --exclude '.env' --exclude 'backups/' deploy/staging/ root@146.190.4.99:/opt/mobility/
 ssh root@146.190.4.99 'chown -R deploy:deploy /opt/mobility && chmod 750 /opt/mobility'
 ```
 
@@ -108,9 +108,20 @@ the apps out of the existing database.
 GitHub → **Actions → Deploy staging → Run workflow** on `main`. With `image_tag` empty it deploys the commit
 the run starts from; CI must have passed on that commit (the job checks that both images exist).
 
-The workflow syncs `deploy/staging/` to `/opt/mobility` (never touching `.env`) and runs `./deploy.sh <sha>`:
-pull, restart, wait for both apps to be healthy (up to 5 minutes), then check `https://<API_HOST>`. If the
-apps do not become healthy it switches back to the previous tag and the job fails.
+The workflow syncs `deploy/staging/` to `/opt/mobility` (never touching `.env` or `backups/`) and runs
+`./deploy.sh <sha>`:
+
+1. Dump the database to `backups/pre-deploy-<UTC time>-<previous tag>.dump` (mode 600, last 5 kept). If the
+   dump fails, nothing is changed.
+2. Pull, restart, and wait for both apps to be healthy (up to 5 minutes).
+3. Recreate Caddy or RabbitMQ when their config file (`Caddyfile`, `rabbitmq/20-staging.conf`) changed. A
+   single bind-mounted file keeps pointing at the old copy after rsync replaces it, so without this a
+   changed Caddyfile would never take effect.
+4. Check `https://<API_HOST>`.
+
+If the apps do not become healthy, it switches back to the previous tag and the job fails, unless the new
+version applied database migrations: see [Failed deploy after a migration](#failed-deploy-after-a-migration).
+The dumps live on the droplet itself, so they protect against a bad deploy, not against losing the droplet.
 
 The first start takes a few minutes: images download, Flyway creates the schema, and Caddy obtains the
 certificates. Then check:
@@ -169,9 +180,12 @@ GUI tools (DBeaver, TablePlus, DataGrip, RedisInsight) can open the tunnel thems
 Staging uses the fixed login code and holds test data, but these are still the live staging stores:
 changing rows or flushing Redis affects everyone testing.
 
-**Rollback and migrations:** rolling back the app does not roll back the database. Flyway ignores migrations
-newer than the running code, so an older app starts, but only if the newer migrations were backwards-compatible
-(additive). Keep migrations additive.
+**Rollback and migrations:** rolling back the app does not roll back the database. An older version only
+starts against a newer schema when the newer migrations were purely additive (new tables, nullable columns).
+Dropping or renaming a column, or changing a constraint the old code relies on, makes the old version fail
+Hibernate's schema validation. That is why `deploy.sh` does not roll back automatically once a deploy has
+applied migrations. To keep automatic rollback, split such changes over two releases (expand, then contract):
+first add the new column and write both, then drop the old one in a later release.
 
 **Reset all staging data** (database, Redis, RabbitMQ, documents, certificates): `docker compose down -v`,
 then deploy again. On the next start the admin is bootstrapped again. This cannot be undone.
@@ -206,6 +220,25 @@ When document storage and backups should leave the droplet:
    30 19 * * * cd /opt/mobility && ./backup.sh >> /home/deploy/backup.log 2>&1
    ```
    Run `./backup.sh` once by hand and check that a `postgres/mobility-*.dump` object appears in the bucket.
+
+### Failed deploy after a migration
+
+When the deploy job ends with `Flyway applied ... new migration(s): NOT rolling back`, the new version is
+not healthy and the database already has its schema. Read the core-app log tail in the job output first:
+
+- **Fix forward** (usually best): fix the cause, merge, and deploy the new commit. The pre-deploy dump stays
+  available.
+- **Go back to the previous version:** restore the dump `deploy.sh` named, then deploy the previous tag:
+  ```bash
+  ls -lt backups/                       # newest first; the job log names the file
+  docker compose stop core-app
+  docker compose exec -T postgres psql -U postgres -c "DROP DATABASE mobility WITH (FORCE)" -c "CREATE DATABASE mobility OWNER mobility_app"
+  docker compose exec -T postgres psql -U postgres -d mobility -c "CREATE EXTENSION postgis" -c "CREATE EXTENSION pg_trgm"
+  docker compose exec -T postgres pg_restore -U postgres -d mobility --no-owner --role=mobility_app < backups/<file>.dump
+  ./deploy.sh <previous full sha>      # the previous tag is in the file name and the job log
+  ```
+  Changes made between the dump and the restore are lost. Uploaded document files are not in the dump
+  and are not touched.
 
 ### Restoring a backup
 

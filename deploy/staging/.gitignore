@@ -1,3 +1,4 @@
 .env
 .env.*
 !.env.staging.example
+backups/

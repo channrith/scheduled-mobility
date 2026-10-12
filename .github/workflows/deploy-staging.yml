@@ -55,8 +55,8 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
 
       - name: Sync deploy bundle
-        # .env (secrets) only exists on the server and is never overwritten or deleted.
-        run: rsync -rlptz --delete --exclude '.env' --exclude '.env.*' deploy/staging/ "$TARGET:/opt/mobility/"
+        # .env (secrets) and backups/ (pre-deploy dumps) only exist on the server: never overwritten or deleted.
+        run: rsync -rlptz --delete --exclude '.env' --exclude '.env.*' --exclude 'backups/' deploy/staging/ "$TARGET:/opt/mobility/"
 
       - name: Deploy
         # The job's GITHUB_TOKEN lets the server pull; it is logged out again and expires when the job ends.
