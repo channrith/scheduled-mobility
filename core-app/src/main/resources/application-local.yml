@@ -17,9 +17,12 @@ identity:
   otp:
     # Dev-only default. Set OTP_HMAC_SECRET in every real environment.
     hmac-secret: ${OTP_HMAC_SECRET:local-dev-otp-secret-change-me-0123456789}
+
   token:
-    # Without JWT_PRIVATE_KEY/JWT_PUBLIC_KEY a throwaway key pair is generated at startup.
-    allow-generated-keys: true
+    issuer: ${JWT_ISSUER:mobility-core}
+    private-key-file: ${JWT_PRIVATE_KEY_FILE}
+    public-key-file: ${JWT_PUBLIC_KEY_FILE}
+    allow-generated-keys: false
 
 idempotency:
   # Dev-only default (base64 of 32 bytes). Set IDEMPOTENCY_ENCRYPTION_KEY in every real environment.

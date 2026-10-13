@@ -1,0 +1,16 @@
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:mobility}
+
+location:
+  jwt:
+    public-key-location: ${JWT_PUBLIC_KEY_LOCATION}
+    issuer: ${JWT_ISSUER:mobility-core}
+
+management:
+  endpoint:
+    health:
+      show-details: alwayscore-app/srJwtDecoderConfig.javac/main/resources/application-lcore-app/src/main/resources/application-local.ymlocal.yml

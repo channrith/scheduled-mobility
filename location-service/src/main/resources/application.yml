@@ -1,6 +1,7 @@
 spring:
   application:
     name: location-service
+
   threads:
     virtual:
       enabled: true
