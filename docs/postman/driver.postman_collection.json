@@ -1,0 +1,2687 @@
+{
+  "info": {
+    "name": "Scheduled Mobility \u2014 Driver APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Import the matching local environment. Driver login \u2192 driver profile/documents \u2192 submit. A staff ADMIN must first register the driver (otherwise OTP login creates a PASSENGER). Use the separate admin login and admin folders for onboarding/review; refresh the driver token after role changes. Configure actual OTP codes; 0000 only works when OTP_FIXED_CODE=0000 and a fresh OTP was requested. Document uploads require manual file selection. Review state-changing admin requests individually; this collection is not a single linear Runner workflow. No real tokens or private keys are included."
+  },
+  "item": [
+    {
+      "name": "Driver login",
+      "item": [
+        {
+          "name": "1. Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/otp/request",
+            "description": "Request a fresh OTP before verification. Local SMS stub writes the code to var/log/core-app.log. A fixed code still requires this step; resend cooldown is 60 seconds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{driverPhone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "2. Verify OTP and save tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/otp/verify",
+            "description": "Set the actual OTP in the selected environment. Tokens are stored separately for driver and admin. Unknown phones become passengers; admin registration grants the DRIVER role.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{driverPhone}}\",\n  \"code\": \"{{driverOtpCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set(\"driverAccessToken\", data.accessToken);",
+                  "  pm.environment.set(\"driverRefreshToken\", data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "3. Refresh and save rotated tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/refresh",
+            "description": "On retry, set idempotencyKey to the exact key used in the original refresh. Clear it before a new operation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{driverRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set(\"driverAccessToken\", data.accessToken);",
+                  "  pm.environment.set(\"driverRefreshToken\", data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "4. Current user and roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/me",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "5. Logout (revokes refresh session)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/logout",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{driverRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Driver profile and documents",
+      "item": [
+        {
+          "name": "My driver profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me",
+            "description": "Status, documents, vehicle, `readiness` and history. Personal data is masked.\n\n**Roles:** DRIVER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"driverId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"driverVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My current documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me/documents",
+            "description": "**Roles:** DRIVER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document \u2014 NATIONAL_ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back.\n\n**Roles:** DRIVER Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "NATIONAL_ID",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                },
+                {
+                  "key": "back",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required for card images. Disable this field if front is a PDF."
+                },
+                {
+                  "key": "expiresOn",
+                  "type": "text",
+                  "value": "{{documentExpiresOn}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document \u2014 DRIVING_LICENSE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back.\n\n**Roles:** DRIVER Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "DRIVING_LICENSE",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                },
+                {
+                  "key": "back",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required for card images. Disable this field if front is a PDF."
+                },
+                {
+                  "key": "expiresOn",
+                  "type": "text",
+                  "value": "{{documentExpiresOn}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document \u2014 PROFILE_PHOTO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back.\n\n**Roles:** DRIVER Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "PROFILE_PHOTO",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document \u2014 VEHICLE_REGISTRATION",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back.\n\n**Roles:** DRIVER Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "VEHICLE_REGISTRATION",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                },
+                {
+                  "key": "back",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required for card images. Disable this field if front is a PDF."
+                },
+                {
+                  "key": "expiresOn",
+                  "type": "text",
+                  "value": "{{documentExpiresOn}}"
+                },
+                {
+                  "key": "vehicleId",
+                  "type": "text",
+                  "value": "{{vehicleId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Submit documents for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/drivers/me/submit",
+            "description": "PENDING \u2192 DOCS_SUBMITTED. Requires NATIONAL_ID, DRIVING_LICENSE and PROFILE_PHOTO (`driver.documents-missing` lists what is missing).\n\n**Roles:** DRIVER"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Location service (local JWT check)",
+      "item": [
+        {
+          "name": "Check driver JWT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{locationBaseUrl}}/api/v1/drivers/me/auth-check",
+            "description": "Local-profile endpoint. Requires a DRIVER token. This service currently exposes no HTTP GPS-update endpoint."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin login",
+      "item": [
+        {
+          "name": "1. Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/otp/request",
+            "description": "Request a fresh OTP before verification. Local SMS stub writes the code to var/log/core-app.log. A fixed code still requires this step; resend cooldown is 60 seconds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{adminPhone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "2. Verify OTP and save tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/otp/verify",
+            "description": "Set the actual OTP in the selected environment. Tokens are stored separately for driver and admin. Unknown phones become passengers; admin registration grants the DRIVER role.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{adminPhone}}\",\n  \"code\": \"{{adminOtpCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set(\"adminAccessToken\", data.accessToken);",
+                  "  pm.environment.set(\"adminRefreshToken\", data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "3. Refresh and save rotated tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/refresh",
+            "description": "On retry, set idempotencyKey to the exact key used in the original refresh. Clear it before a new operation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{adminRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.environment.set(\"adminAccessToken\", data.accessToken);",
+                  "  pm.environment.set(\"adminRefreshToken\", data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "4. Current user and roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/me",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "5. Logout (revokes refresh session)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{coreBaseUrl}}/api/v1/auth/logout",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{adminRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin \u2014 driver onboarding and review",
+      "item": [
+        {
+          "name": "Document review queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{coreBaseUrl}}/api/v1/admin/documents",
+              "host": [
+                "{{coreBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "type",
+                  "value": "NATIONAL_ID",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Oldest upload first. Defaults to `status=PENDING_REVIEW`; filter by `type`.\n\n**Roles:** ADMIN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List and search drivers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{coreBaseUrl}}/api/v1/admin/drivers",
+              "host": [
+                "{{coreBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "drivers"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "vehicleClass",
+                  "value": "CAR",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "expiringSoon",
+                  "value": "False",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "q",
+                  "value": "test",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Newest first; `size` 1\u2013100. `q` matches name, phone (any format) or plate of the current vehicle, or exactly a national ID / licence number. `expiringSoon` = an approved document expired or expiring within 30 days.\n\n**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Register a driver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers",
+            "description": "Creates the driver (PENDING) and their login (DRIVER role) for the phone number; an existing user with that phone gets the DRIVER role instead of a duplicate account. National ID, licence number and bank account are encrypted at rest and must be unique.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankAccountName\": \"Postman Test Driver\",\n  \"bankAccountNumber\": \"TEST-ACCOUNT-001\",\n  \"bankName\": \"Test Bank\",\n  \"fullName\": \"Postman Test Driver\",\n  \"homeZone\": \"SEN_SOK\",\n  \"licenseNumber\": \"TEST-LIC-001\",\n  \"nationalId\": \"TEST-NID-001\",\n  \"phone\": \"{{driverPhone}}\",\n  \"preferredLanguage\": \"EN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"driverId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"driverVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Driver detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}",
+            "description": "Current documents, current vehicle and all assignments, `readiness` (what blocks approval) and status history.\n\n**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"driverId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"driverVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Edit driver details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}",
+            "description": "Omitted (null) fields stay unchanged. `version` must match the driver's current version (`concurrent-update` otherwise). The phone number is the login and cannot be changed here.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankAccountName\": \"Postman Test Driver\",\n  \"bankAccountNumber\": \"TEST-ACCOUNT-001\",\n  \"bankName\": \"Test Bank\",\n  \"fullName\": \"Postman Test Driver\",\n  \"homeZone\": \"SEN_SOK\",\n  \"licenseNumber\": \"TEST-LIC-001\",\n  \"nationalId\": \"TEST-NID-001\",\n  \"preferredLanguage\": \"EN\",\n  \"version\": {{driverVersion}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"driverId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"driverVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "TRAINING \u2192 APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/approve",
+            "description": "Also requires a current vehicle assignment with an approved VEHICLE_REGISTRATION. The driver can then be dispatched.\n\n**Roles:** ADMIN"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Audit trail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/audit",
+              "host": [
+                "{{coreBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "drivers",
+                "{{driverId}}",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Staff actions on the driver, their documents and their account, newest first.\n\n**Roles:** ADMIN, SAFETY_OFFICER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document on the driver's behalf \u2014 NATIONAL_ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back. Recorded with the staff member as uploader and audited.\n\n**Roles:** ADMIN Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "NATIONAL_ID",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                },
+                {
+                  "key": "back",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required for card images. Disable this field if front is a PDF."
+                },
+                {
+                  "key": "expiresOn",
+                  "type": "text",
+                  "value": "{{documentExpiresOn}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document on the driver's behalf \u2014 DRIVING_LICENSE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back. Recorded with the staff member as uploader and audited.\n\n**Roles:** ADMIN Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "DRIVING_LICENSE",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                },
+                {
+                  "key": "back",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required for card images. Disable this field if front is a PDF."
+                },
+                {
+                  "key": "expiresOn",
+                  "type": "text",
+                  "value": "{{documentExpiresOn}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document on the driver's behalf \u2014 PROFILE_PHOTO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back. Recorded with the staff member as uploader and audited.\n\n**Roles:** ADMIN Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "PROFILE_PHOTO",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload a document on the driver's behalf \u2014 VEHICLE_REGISTRATION",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents",
+            "description": "JPEG, PNG or PDF (checked by content), max 10 MB per side, encrypted at rest. Replaces the current document of the same type. NATIONAL_ID, DRIVING_LICENSE and VEHICLE_REGISTRATION are two-sided: send `front` and `back` photos, or a single PDF scan of both sides as `front`. PROFILE_PHOTO must be an image and has no back. Recorded with the staff member as uploader and audited.\n\n**Roles:** ADMIN Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle. Select local upload files before sending. Postman sets the multipart boundary; do not manually set Content-Type. Vehicle documents require an assigned vehicle.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "VEHICLE_REGISTRATION",
+                  "type": "text"
+                },
+                {
+                  "key": "front",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG/PNG; or a PDF containing both sides for card documents."
+                },
+                {
+                  "key": "back",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required for card images. Disable this field if front is a PDF."
+                },
+                {
+                  "key": "expiresOn",
+                  "type": "text",
+                  "value": "{{documentExpiresOn}}"
+                },
+                {
+                  "key": "vehicleId",
+                  "type": "text",
+                  "value": "{{vehicleId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"documentId\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Approve a document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents/{{documentId}}/approve",
+            "description": "Records reviewer and time. Expired documents cannot be approved.\n\n**Roles:** ADMIN"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get a short-lived preview link for one side of a document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents/{{documentId}}/files/{{side}}/preview-url",
+            "description": "`side` is `front` or `back`. The returned `url` (relative to the API base) works without a token for a few minutes and contains no storage path. Issuing it is audited as a view.\n\n**Roles:** ADMIN, SAFETY_OFFICER"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.url) pm.environment.set(\"previewUrl\", data.url);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reject a document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/documents/{{documentId}}/reject",
+            "description": "`reason` (\u2265 10 characters) is shown to the driver, who must upload a new one.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Manual review completed; see test case notes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "SUSPENDED \u2192 APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/reinstate",
+            "description": "`reason` required; the driver must still meet every approval requirement.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Manual review completed; see test case notes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reject an applicant (final)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/reject",
+            "description": "From PENDING, DOCS_SUBMITTED or TRAINING. `reason` of at least 10 characters.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Manual review completed; see test case notes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "PENDING \u2192 DOCS_SUBMITTED on the driver's behalf",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/submit-documents",
+            "description": "For in-person onboarding. Requires NATIONAL_ID, DRIVING_LICENSE and PROFILE_PHOTO uploaded.\n\n**Roles:** ADMIN"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "APPROVED \u2192 SUSPENDED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/suspend",
+            "description": "Due process: `reason` (\u2265 10 characters) and `noticeAt`, when the driver was notified (defaults to now; not in the future).\n\n**Roles:** ADMIN, SAFETY_OFFICER",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"noticeAt\": \"{{$isoTimestamp}}\",\n  \"reason\": \"Manual review completed; see test case notes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "DOCS_SUBMITTED \u2192 TRAINING",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/training",
+            "description": "Requires NATIONAL_ID, DRIVING_LICENSE and PROFILE_PHOTO approved and not expired.\n\n**Roles:** ADMIN"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Assign a vehicle for a period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/vehicle-assignments",
+            "description": "`validFrom` defaults to now and may be in the future; `validTo` is optional (open-ended). An open-ended assignment of the driver that started earlier ends at `validFrom`. A vehicle belongs to one driver at a time (`vehicle.already-assigned`); other overlaps for the driver are refused (`driver.assignment-overlap`).\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"validFrom\": \"{{$isoTimestamp}}\",\n  \"validTo\": null,\n  \"vehicleId\": \"{{vehicleId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  " const data = pm.response.json();",
+                  " pm.environment.set(\"driverVersion\", data.version);",
+                  " const assignment = (data.vehicleAssignments || []).find(a => a.vehicle.id === pm.environment.get(\"vehicleId\") && a.active);",
+                  " if (assignment) pm.environment.set(\"assignmentId\", assignment.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "End or cancel an assignment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/drivers/{{driverId}}/vehicle-assignments/{{assignmentId}}",
+            "description": "Ends a current assignment now; cancels a future one.\n\n**Roles:** ADMIN"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin \u2014 vehicles",
+      "item": [
+        {
+          "name": "List vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{coreBaseUrl}}/api/v1/admin/vehicles",
+              "host": [
+                "{{coreBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "vehicles"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "test",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "vehicleClass",
+                  "value": "CAR",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Newest first; `q` matches the plate (separators ignored) or owner name. Rows include the driver the vehicle is assigned to right now.\n\n**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Register a vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/vehicles",
+            "description": "The plate is normalized (uppercase, single spaces) and must be unique (`vehicle.plate-taken`). `ownership` THIRD_PARTY (e.g. a rented tuk-tuk) requires `ownerName` and `ownerPhone`.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": \"White\",\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"modelYear\": 2024,\n  \"ownerName\": \"Postman Test Driver\",\n  \"ownerPhone\": \"{{driverPhone}}\",\n  \"ownership\": \"DRIVER\",\n  \"plateNumber\": \"PP-TEST-001\",\n  \"seats\": 4,\n  \"vehicleClass\": \"CAR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"vehicleId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"vehicleVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get a vehicle",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/vehicles/{{vehicleId}}",
+            "description": "**Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"vehicleId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"vehicleVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Edit a vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "{{language}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{requestIdempotencyKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{coreBaseUrl}}/api/v1/admin/vehicles/{{vehicleId}}",
+            "description": "Replaces all editable fields. `version` must match (`concurrent-update` otherwise). A vehicle with a current or future assignment cannot be set INACTIVE.\n\n**Roles:** ADMIN",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": \"White\",\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"modelYear\": 2024,\n  \"ownerName\": \"Postman Test Driver\",\n  \"ownerPhone\": \"{{driverPhone}}\",\n  \"ownership\": \"DRIVER\",\n  \"plateNumber\": \"PP-TEST-001\",\n  \"seats\": 4,\n  \"status\": \"ACTIVE\",\n  \"vehicleClass\": \"CAR\",\n  \"version\": {{vehicleVersion}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"requestIdempotencyKey\", pm.environment.get(\"idempotencyKey\") || pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) pm.environment.set(\"vehicleId\", data.id);",
+                  "  if (data.version !== undefined) pm.environment.set(\"vehicleVersion\", data.version);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

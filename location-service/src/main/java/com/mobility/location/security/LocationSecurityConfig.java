@@ -6,6 +6,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 public class LocationSecurityConfig {
@@ -32,15 +33,19 @@ public class LocationSecurityConfig {
 
                 // Define endpoint permissions.
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR)
+                        .permitAll()
+
                         .requestMatchers(
-                                "/actuator/healthapplication.yml",
+                                "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
 
                         .requestMatchers("/api/v1/drivers/me/**")
                         .hasRole("DRIVER")
 
-                        .anyRequest().denyAll()
+                        .anyRequest()
+                        .denyAll()
                 )
 
                 // Use the JwtDecoder bean and the role converter.

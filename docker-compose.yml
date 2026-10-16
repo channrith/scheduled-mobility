@@ -53,7 +53,7 @@ services:
   web-console:
     build: ./web-console
     environment:
-      CORE_API_URL: ${CORE_API_URL:-http://host.docker.internal:8080}
+      CORE_API_URL: ${CORE_API_URL:-http://host.docker.internal:${CORE_SERVER_PORT:-${SERVER_PORT:-8080}}}
       # Plain http on localhost: session cookies cannot be marked Secure.
       COOKIE_INSECURE: "true"
     ports:

@@ -20,8 +20,8 @@ identity:
 
   token:
     issuer: ${JWT_ISSUER:mobility-core}
-    private-key-file: ${JWT_PRIVATE_KEY_FILE}
-    public-key-file: ${JWT_PUBLIC_KEY_FILE}
+    private-key-file: ${JWT_PRIVATE_KEY_FILE:}
+    public-key-file: ${JWT_PUBLIC_KEY_FILE:}
     allow-generated-keys: false
 
 idempotency:

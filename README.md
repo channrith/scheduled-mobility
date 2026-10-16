@@ -25,9 +25,23 @@ Maven is not required: use the wrapper `./mvnw`.
 
 ## Run locally
 
+To start both backends with `.env` loaded and the `local` profile:
+
 ```bash
-# 1. Configure local credentials (optional: the defaults match .env.example)
+docker compose up -d --wait postgres redis rabbitmq
+./scripts/run-local.sh
+```
+
+Configure `.env` and JWT key files first (see Configuration below). Logs are written to
+`var/log/core-app.log` and `var/log/location-service.log`. Ctrl+C stops both backends.
+If either backend exits, the script stops the other one too.
+
+```bash
+# 1. Configure local credentials and shared JWT keys
 cp .env.example .env
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out jwt-private.pem
+openssl pkey -in jwt-private.pem -pubout -out jwt-public.pem
+set -a; source .env; set +a
 
 # 2. Start infrastructure
 docker compose up -d
@@ -36,7 +50,7 @@ docker compose up -d
 ./mvnw spring-boot:run -pl core-app -Dspring-boot.run.profiles=local
 
 # 4. Run the location service (http://localhost:8081)
-./mvnw spring-boot:run -pl location-service
+./mvnw spring-boot:run -pl location-service -Dspring-boot.run.profiles=local
 ```
 
 Flyway applies migrations automatically on core-app startup.
@@ -50,6 +64,45 @@ Flyway applies migrations automatically on core-app startup.
 Stop infrastructure with `docker compose down`. Add `-v` to also delete the data volumes.
 
 ## Configuration
+
+### Optional approved local driver
+
+Set `LOCAL_APPROVED_DRIVER_SEED_ENABLED=true` in `.env`, then restart core-app with the
+explicit `local` profile (or use `./scripts/run-local.sh`). The flag defaults to false.
+Startup fails if the flag is enabled without `local`, or with `stage`, `staging`, `prod`,
+or `production`, including combinations such as `local,staging`.
+
+The seed prepares `012898339` (`+85512898339`) through the existing account, document,
+vehicle and onboarding services. It grants DRIVER, adds approved synthetic NATIONAL_ID,
+DRIVING_LICENSE, PROFILE_PHOTO and VEHICLE_REGISTRATION documents, and follows the normal
+submission/training/approval transitions. It uses an existing active vehicle assignment;
+otherwise it reuses or creates vehicle `LOCAL-SEED-12898339` and assigns it. Existing user,
+driver, vehicle and valid document/assignment IDs are retained. Repeated startup adds no
+duplicate records, document reviews or status transitions. Rejected/expired documents are
+superseded through normal upload rules, preserving their historical rows. Suspended fixture
+drivers are reinstated through the normal readiness checks; REJECTED drivers cannot be
+reopened and cause the seed transaction to roll back.
+
+The generated PNGs are visibly marked as local test fixtures, stored using the normal
+encrypted storage service, and reviewed with a startup-only audit identity for the fixture
+driver. No ADMIN role or usable token is created by the seed. All database seed changes
+share one transaction; concurrent local starts are serialized. Turn the flag off to stop
+reapplying the fixture; disabling it does not delete the fixture.
+
+JWT signature/issuer checks, DRIVER authorization and the APPROVED location requirement
+remain enabled. Request and verify a fresh OTP for this phone after seeding to obtain a
+token containing DRIVER. `OTP_FIXED_CODE`, if desired, is a separate local testing setting;
+the seed does not change it or bypass OTP login. Use that token for:
+
+```bash
+curl -i http://localhost:8081/api/v1/drivers/me/location \
+  -H "Authorization: Bearer $DRIVER_ACCESS_TOKEN" \
+  -H 'Content-Type: application/json' \
+  --data "{\"latitude\":11.5564,\"longitude\":104.9282,\"accuracyMeters\":10,\"recordedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+```
+
+A valid, recent location returns HTTP `204`. Keep `CORE_BASE_URL` pointed at the core-app
+instance containing the seeded driver. These are synthetic development records only.
 
 `application.yml` contains no secrets. Every host and credential comes from an environment variable.
 The `local` profile adds defaults that match `docker-compose.yml`. The `staging` profile (both apps) trusts
@@ -65,7 +118,10 @@ API docs on. For any environment other than `local`, set these variables:
 | `OTP_FIXED_CODE` | **Test environments only.** Every phone logs in with this code (e.g. `1234`) instead of a random one; rate limits still apply. Anyone who knows a phone number can then log in as that user, so never use it with real personal data. Startup fails if a `prod`/`production` profile is active |
 | `BOOTSTRAP_ADMIN_PHONE`, `BOOTSTRAP_ADMIN_NAME` | Granted ADMIN at startup while no ADMIN exists yet (audited, actor = system); ignored afterwards, so it can stay set |
 | `JWT_PRIVATE_KEY_FILE`, `JWT_PUBLIC_KEY_FILE` | Paths to the RS256 access-token keys, PEM (PKCS#8 / X.509) |
-| `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Local profile generates a throwaway pair if neither is set |
+| `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Both backends must use the same public key |
+| `JWT_PUBLIC_KEY_LOCATION` | Optional location-service public key resource (e.g. `file:/path/jwt-public.pem`); locally defaults to `JWT_PUBLIC_KEY_FILE`. Leave empty when using inline `JWT_PUBLIC_KEY` |
+| `JWT_ISSUER` | Shared token issuer for both backends (default `mobility-core`) |
+| `CORE_BASE_URL` | Core API URL used by location-service (`http://localhost:8080` locally; `http://core-app:8080` in staging) |
 | `IDEMPOTENCY_ENCRYPTION_KEY` | Base64 AES-256 key encrypting cached idempotent responses (`openssl rand -base64 32`) |
 | `PII_ENCRYPTION_KEY` | Base64 AES-256 key for personal data: national ID, bank account, document files (`openssl rand -base64 32`) |
 | `PII_HASH_SECRET` | HMAC secret (≥ 32 chars) for blind indexes, e.g. duplicate national ID detection |

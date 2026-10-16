@@ -58,6 +58,7 @@ services:
       BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Administrator}
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
+      JWT_ISSUER: ${JWT_ISSUER:-mobility-core}
       IDEMPOTENCY_ENCRYPTION_KEY: ${IDEMPOTENCY_ENCRYPTION_KEY:?}
       PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?}
       PII_HASH_SECRET: ${PII_HASH_SECRET:?}
@@ -96,7 +97,17 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+      CORE_BASE_URL: http://core-app:8080
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
+      JWT_ISSUER: ${JWT_ISSUER:-mobility-core}
       JAVA_TOOL_OPTIONS: ${LOCATION_SERVICE_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
+    depends_on:
+      core-app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness"]
       interval: 15s
