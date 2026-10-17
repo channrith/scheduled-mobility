@@ -56,6 +56,13 @@ class OsrmRoutingClientTest {
 			}
 			byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
 			exchange.getResponseHeaders().add("Content-Type", "application/json");
+			String accepted = exchange.getRequestHeaders().getFirst("Accept-Encoding");
+			if (accepted != null) {
+				// Like router.project-osrm.org seen from staging: asked for any compression, it answers "deflate" with raw
+				// deflate data (no zlib header), which Java's inflater rejects ("incorrect header check").
+				bytes = rawDeflate(bytes);
+				exchange.getResponseHeaders().add("Content-Encoding", "deflate");
+			}
 			exchange.sendResponseHeaders(status, bytes.length);
 			exchange.getResponseBody().write(bytes);
 			exchange.close();
@@ -66,6 +73,19 @@ class OsrmRoutingClientTest {
 		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(OsrmRoutingClient.class)).addAppender(logs);
 		client = new OsrmRoutingClient(URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofMillis(500),
 				JsonMapper.builder().build());
+	}
+
+	static byte[] rawDeflate(byte[] data) {
+		java.util.zip.Deflater deflater = new java.util.zip.Deflater(java.util.zip.Deflater.DEFAULT_COMPRESSION, true);
+		deflater.setInput(data);
+		deflater.finish();
+		java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+		byte[] buffer = new byte[1024];
+		while (!deflater.finished()) {
+			out.write(buffer, 0, deflater.deflate(buffer));
+		}
+		deflater.end();
+		return out.toByteArray();
 	}
 
 	@AfterEach
@@ -102,6 +122,8 @@ class OsrmRoutingClientTest {
 		client.route(RIVERSIDE, AIRPORT);
 
 		assertThat(lastHeaders.get().containsKey("Upgrade")).isFalse();
+		// No compression: the real server's "deflate" answers break Java's inflater.
+		assertThat(lastHeaders.get().getFirst("Accept-Encoding")).isNull();
 		assertThat(lastHeaders.get().getFirst("User-Agent")).startsWith("scheduled-mobility/");
 	}
 

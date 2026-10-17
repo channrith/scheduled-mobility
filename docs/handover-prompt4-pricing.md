@@ -155,6 +155,11 @@ with the OSRM provider. No new staging env vars are needed.
 - PostGIS geography as GeoJSON text works with Hibernate validation:
   `@Column(columnDefinition = "geography") @ColumnTransformer(read = "ST_AsGeoJSON(area)",
   write = "ST_GeomFromGeoJSON(?)::geography")` on a `String`. Validity checked with `ST_IsValid` first.
+- **Spring 7's `JdkClientHttpRequestFactory` compresses by default** (sends `Accept-Encoding: gzip`). The public
+  OSRM server answers `Content-Encoding: deflate` with raw deflate data and Java's inflater fails ("incorrect
+  header check"); quotes on staging failed with `routing-unavailable` until `enableCompression(false)`. curl
+  worked because it doesn't ask for compression. The OSRM client also uses HTTP/1.1 and logs every failure's
+  cause; `OsrmRoutingClientTest`'s stub imitates the server's deflate answers.
 - RestClient URI templates percent-encode `,` and `;` — OSRM's coordinate separators. The OSRM URL is built
   by hand (coordinates are plain numbers).
 - Tokens issued before `MutableClock.advance(...)` expire; issue new ones after moving the clock.
@@ -177,7 +182,7 @@ public — never write secrets or real staging values into it.
    (1.000) and rate (4,100) on `/pricing/settings`. Until zones exist, every quote is
    `outside-service-area`.
 2. **Verify OSRM from the droplet:** one quote in the quote tester; no "Straight-line estimate" badge means
-   OSRM answered. On `routing-unavailable`, check core-app logs and outbound HTTPS from the droplet.
+   OSRM answered. On `routing-unavailable`: `docker compose logs core-app | grep -i osrm` names the cause.
 3. **Own OSRM before production** (public demo server: light use only, no SLA): OSRM container with the
    Geofabrik Cambodia extract; then set `OSRM_URL`.
 4. **Driving times are optimistic:** OSRM's car profile for every vehicle class, no traffic. Consider a

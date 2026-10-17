@@ -36,6 +36,9 @@ public class OsrmRoutingClient implements RoutingClient {
 		HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(timeout).build();
 		JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(client);
 		factory.setReadTimeout(timeout);
+		// Spring asks for gzip/deflate by default; the public OSRM server answers "deflate" with raw deflate data,
+		// which Java's zlib inflater rejects ("incorrect header check"). Answers are ~1 KB: no compression.
+		factory.enableCompression(false);
 		this.baseUrl = baseUrl.toString().replaceAll("/+$", "");
 		this.http = RestClient.builder()
 			.requestFactory(factory)
