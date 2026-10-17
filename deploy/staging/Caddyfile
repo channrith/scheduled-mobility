@@ -9,7 +9,6 @@
 	header {
 		-Server
 		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
 	}
 	log {
 		output stdout
@@ -19,6 +18,7 @@
 
 {$API_HOST} {
 	import common
+	header Referrer-Policy no-referrer
 	# Only health is public on actuator; everything else there stays internal.
 	@actuator {
 		path /actuator/*
@@ -33,6 +33,7 @@
 
 {$LOCATION_HOST} {
 	import common
+	header Referrer-Policy no-referrer
 	@actuator {
 		path /actuator/*
 		not path /actuator/health /actuator/health/*
@@ -45,6 +46,8 @@
 {$CONSOLE_HOST} {
 	import common
 	header {
+		# Map tiles: OpenStreetMap blocks tile requests without a Referer. Other sites get the origin only.
+		Referrer-Policy strict-origin-when-cross-origin
 		# Spring adds HSTS for the API; Next.js does not, so Caddy adds it here.
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		# Document previews are same-origin <img>/<iframe>; no other site may frame the console.
