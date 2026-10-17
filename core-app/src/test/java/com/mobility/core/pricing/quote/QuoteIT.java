@@ -141,6 +141,22 @@ class QuoteIT {
 	}
 
 	@Test
+	void quoteTimestampsAreReturnedAsStored() {
+		api.createRule(usdRule(city, "MOTO"));
+		Map<String, Object> body = request(at(lat, lng), at(lat + 0.01, lng), "MOTO");
+		body.put("pickupAt", Instant.now().plus(Duration.ofHours(3)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+			.plusNanos(987_654_321).toString());
+
+		JsonNode created = quoteOk(passenger, body);
+		JsonNode read = api.json(api.get("/api/v1/quotes/" + created.get("id").asString(), passenger));
+
+		for (String field : List.of("pickupAt", "eta", "expiresAt", "createdAt")) {
+			assertThat(created.get(field).asString()).as(field).isEqualTo(read.get(field).asString());
+		}
+		assertThat(created.get("pickupAt").asString()).endsWith(".987654Z");
+	}
+
+	@Test
 	void theVersionInForceAtPickupTimeIsUsed() {
 		api.createRule(usdRule(city, "VAN"));
 		Instant nextMonth = Instant.now().plus(Duration.ofDays(30));

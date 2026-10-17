@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import com.mobility.core.audit.AuditLog;
 import com.mobility.core.identity.CurrentUserProvider;
+import com.mobility.core.shared.time.StoredTime;
 import com.mobility.core.shared.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,8 @@ public class PricingSettings implements ExchangeRateProvider {
 	@Transactional
 	public CurrentValue change(Setting setting, BigDecimal value) {
 		BigDecimal valid = validate(setting, value);
-		SettingChange change = changes.save(new SettingChange(setting, valid, currentUser.require().userId(), clock.instant()));
+		SettingChange change = changes.save(new SettingChange(setting, valid, currentUser.require().userId(),
+				StoredTime.of(clock.instant())));
 		auditLog.record("pricing.setting.changed", "pricing_setting", setting.name(),
 				Map.of("setting", setting.name(), "value", valid.toPlainString()));
 		return new CurrentValue(setting, change.getValue(), change.getChangedBy(), change.getChangedAt(), false);

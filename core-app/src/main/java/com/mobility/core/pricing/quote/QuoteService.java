@@ -29,6 +29,7 @@ import com.mobility.core.pricing.settings.PricingSettings;
 import com.mobility.core.pricing.zone.LatLng;
 import com.mobility.core.pricing.zone.ZoneService;
 import com.mobility.core.pricing.zone.ZoneService.ZoneHit;
+import com.mobility.core.shared.time.StoredTime;
 import com.mobility.core.shared.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -95,11 +96,11 @@ public class QuoteService {
 	@Transactional
 	public FareQuote create(QuoteRequest request) {
 		CurrentUser user = currentUser.require();
-		Instant now = clock.instant();
+		Instant now = StoredTime.of(clock.instant());
 		if (request.vehicleClass() == null) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "pricing.invalid-field").withProperty("field", "vehicleClass");
 		}
-		Instant pickupAt = request.pickupAt() == null ? now : request.pickupAt();
+		Instant pickupAt = request.pickupAt() == null ? now : StoredTime.of(request.pickupAt());
 		if (pickupAt.isBefore(now.minus(PAST_TOLERANCE)) || pickupAt.isAfter(now.plus(MAX_AHEAD))) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "pricing.pickup-time-invalid");
 		}

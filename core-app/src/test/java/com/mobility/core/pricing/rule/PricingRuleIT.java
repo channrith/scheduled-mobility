@@ -117,6 +117,19 @@ class PricingRuleIT {
 	}
 
 	@Test
+	void timestampsAreReturnedAsStoredEvenWithNanoseconds() {
+		// Java on Linux reads the clock in nanoseconds; PostgreSQL keeps microseconds.
+		Instant start = Instant.now().plus(Duration.ofHours(1)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS).plusNanos(123_456_789);
+		JsonNode created = api.createRule(with(usdRule(city, "TUKTUK_RICKSHAW"), "validFrom", start.toString(),
+				"validTo", start.plus(Duration.ofDays(1)).toString()));
+
+		JsonNode read = api.json(api.get("/api/v1/admin/pricing/rules/" + created.get("id").asString(), api.adminToken));
+		assertThat(created.get("validFrom").asString()).isEqualTo(read.get("validFrom").asString()).endsWith(".123456Z");
+		assertThat(created.get("validTo").asString()).isEqualTo(read.get("validTo").asString());
+		assertThat(created.get("createdAt").asString()).isEqualTo(read.get("createdAt").asString());
+	}
+
+	@Test
 	void versionsAreInsertOnlyInTheDatabase() {
 		String id = api.createRule(usdRule(city, "MOTO")).get("id").asString();
 

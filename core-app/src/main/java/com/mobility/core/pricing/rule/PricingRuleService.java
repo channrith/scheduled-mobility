@@ -20,6 +20,7 @@ import com.mobility.core.corporate.CorporateDirectory;
 import com.mobility.core.driver.VehicleClass;
 import com.mobility.core.identity.CurrentUserProvider;
 import com.mobility.core.pricing.settings.PricingProperties;
+import com.mobility.core.shared.time.StoredTime;
 import com.mobility.core.shared.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -133,7 +134,7 @@ public class PricingRuleService {
 	}
 
 	private PricingRule save(RuleTerms terms) {
-		PricingRule rule = rules.save(new PricingRule(terms, currentUser.require().userId(), clock.instant()));
+		PricingRule rule = rules.save(new PricingRule(terms, currentUser.require().userId(), StoredTime.of(clock.instant())));
 		Map<String, Object> details = new HashMap<>();
 		details.put("city", terms.city());
 		details.put("vehicleClass", terms.vehicleClass().name());
@@ -160,11 +161,12 @@ public class PricingRuleService {
 		BigDecimal factor = decimal(in.fuelIndexFactor(), 3, BigDecimal.ZERO, BigDecimal.TWO, "fuelIndexFactor");
 		BigDecimal maxSurge = decimal(in.maxSurge(), 2, BigDecimal.ONE, BigDecimal.valueOf(5), "maxSurge");
 		Instant from = validFrom(in.validFrom());
-		if (in.validTo() != null && !in.validTo().isAfter(from)) {
+		Instant to = StoredTime.of(in.validTo());
+		if (to != null && !to.isAfter(from)) {
 			throw invalid("validTo");
 		}
 		return new RuleTerms(key.city(), key.vehicleClass(), key.corporateId(), currency, base, perKm, perMin, minFare,
-				factor, maxSurge, from, in.validTo(), true);
+				factor, maxSurge, from, to, true);
 	}
 
 	private LineKey validateKey(LineKey key) {
@@ -183,14 +185,15 @@ public class PricingRuleService {
 
 	/** New versions start now or later: the past stays as it was quoted. */
 	private Instant validFrom(Instant requested) {
-		Instant now = clock.instant();
+		Instant now = StoredTime.of(clock.instant());
 		if (requested == null) {
 			return now;
 		}
-		if (requested.isBefore(now.minus(PAST_TOLERANCE))) {
+		Instant from = StoredTime.of(requested);
+		if (from.isBefore(now.minus(PAST_TOLERANCE))) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "pricing.valid-from-past");
 		}
-		return requested.isBefore(now) ? now : requested;
+		return from.isBefore(now) ? now : from;
 	}
 
 	private static long amount(Long value, String field) {
