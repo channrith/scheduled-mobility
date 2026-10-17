@@ -3,7 +3,8 @@
 Written 2026-10-13, updated 2026-10-17. For a new Claude Code session that needs Prompt 3's context.
 Status: **done.** Plan approved 2026-10-13 (all recommendations; MapLibre + OSM, no satellite layer);
 implemented, tested and committed (`486338b`, `8f76807`, `6ae19ee`, `74fc0b7`) and running on staging.
-Read this file and `CLAUDE.md`; open follow-ups are in section 9.
+Read this file and `CLAUDE.md`; open follow-ups are in section 9. Prompt 4 (pricing) followed: see
+`docs/handover-prompt4-pricing.md`.
 
 ---
 
@@ -248,7 +249,7 @@ Web console (`web-console/`)
 - VS Code's Java extension can write broken classes into `target/` ("Unresolved compilation problems");
   run `./mvnw clean verify`.
 - **MapLibre (v6, ESM) worker:** the bundler does not emit its worker file ("Worker failed to load"). Fixed
-  in `place-map.tsx` with `setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href)`.
+  in `features/maps/map-base.ts` (moved there in Prompt 4) with `setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href)`.
 - **OSM tiles need a Referer.** Staging's Caddy sent `Referrer-Policy: no-referrer` and OSM answered with
   "Access blocked" tiles. The console host now sends `strict-origin-when-cross-origin`; API and location
   hosts keep `no-referrer` (`deploy/staging/Caddyfile`). Works locally either way (no Caddy).
@@ -261,7 +262,7 @@ Web console (`web-console/`)
 
 1. **Map tiles before wider use:** public OSM tiles are fine for a few staff only. Before passenger/driver
    apps or heavy use, switch to a hosted provider (MapTiler, Stadia Maps) or self-hosted Protomaps; it is
-   a tile-URL change in `web-console/src/features/places/place-map.tsx` plus a key.
+   a tile-URL change in `web-console/src/features/maps/map-base.ts` (`OSM_STYLE`) plus a key.
 2. **Verify the seed landmarks:** all 23 are approximate (`verified=false`); e.g. the Techo airport pin is
    ~300 m off the terminal. Staff check them in `/places?unverified=true`.
 3. **Corporate portal** (`(corporate)` route group, separate host) for CORPORATE_ADMIN/BOOKER, reusing the
