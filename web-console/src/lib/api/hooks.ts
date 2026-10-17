@@ -4,8 +4,9 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api, query } from "./client";
 import type {
   AccountDetail, AccountStatus, AccountView, AuditView, CostCenterView, DocumentType, DocumentStatus, DriverDetail,
-  DriverStatus, DriverSummary, DocumentView, Me, MemberPolicy, MemberRole, MemberView, Page, PlaceHit, PlaceType,
-  PlaceView, PreviewUrl, QueueItem, VehicleClass, VehicleListItem, VehicleStatus, VehicleView,
+  DriverStatus, DriverSummary, DocumentView, HistoryEntryView, LatLng, Me, MemberPolicy, MemberRole, MemberView, Page,
+  PlaceHit, PlaceType, PlaceView, PreviewUrl, PriceLineView, QueueItem, QuoteView, RuleView, SettingView, SettingsView,
+  VehicleClass, VehicleListItem, VehicleStatus, VehicleView, ZoneType, ZoneView,
 } from "./types";
 
 const V1 = "/api/v1";
@@ -349,4 +350,101 @@ export function useSavePlace() {
 
 export function useMergePlace(id: string) {
   return usePlaceMutation((intoPlaceId: string) => api.post<PlaceView>(`${V1}/admin/places/${id}/merge`, { intoPlaceId }));
+}
+
+// --- Pricing ------------------------------------------------------------------------------------
+
+export function usePricingCities() {
+  return useQuery({ queryKey: ["pricing", "cities"], queryFn: () => api.get<string[]>(`${V1}/admin/pricing/cities`), staleTime: 5 * 60_000 });
+}
+
+export type LineFilters = { city?: string; vehicleClass?: VehicleClass; corporateId?: string };
+
+export function usePriceLines(filters: LineFilters, enabled = true) {
+  return useQuery({
+    queryKey: ["pricing", "rules", filters],
+    queryFn: () => api.get<PriceLineView[]>(`${V1}/admin/pricing/rules${query(filters)}`),
+    enabled,
+  });
+}
+
+export function useRuleHistory(line: { city: string; vehicleClass: VehicleClass; corporateId?: string } | null) {
+  return useQuery({
+    queryKey: ["pricing", "history", line],
+    queryFn: () => api.get<HistoryEntryView[]>(`${V1}/admin/pricing/rules/history${query(line ?? {})}`),
+    enabled: line !== null,
+  });
+}
+
+function usePricingMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: fn, onSuccess: () => client.invalidateQueries({ queryKey: ["pricing"] }) });
+}
+
+export type RuleInput = {
+  city: string;
+  vehicleClass: VehicleClass;
+  corporateId?: string;
+  currency: string;
+  baseMinor: number;
+  perKmMinor: number;
+  perMinMinor: number;
+  minFareMinor: number;
+  fuelIndexFactor: number;
+  maxSurge: number;
+  validFrom?: string;
+  validTo?: string;
+};
+
+export function useCreateRule() {
+  return usePricingMutation((input: RuleInput) => api.post<RuleView>(`${V1}/admin/pricing/rules`, input));
+}
+
+export function useRetireLine() {
+  return usePricingMutation((input: { city: string; vehicleClass: VehicleClass; corporateId?: string; validFrom?: string }) =>
+    api.post<RuleView>(`${V1}/admin/pricing/rules/retire`, input),
+  );
+}
+
+export function useZones(city?: string) {
+  return useQuery({
+    queryKey: ["pricing", "zones", city ?? ""],
+    queryFn: () => api.get<ZoneView[]>(`${V1}/admin/pricing/zones${query({ city })}`),
+  });
+}
+
+export type ZoneInput = {
+  city: string;
+  type: ZoneType;
+  nameKm?: string;
+  nameEn?: string;
+  polygon: LatLng[];
+  surchargeMinor?: number;
+  surchargeCurrency?: string;
+  active: boolean;
+};
+
+export function useSaveZone() {
+  return usePricingMutation(({ id, ...input }: ZoneInput & { id?: string; version?: number }) =>
+    id ? api.put<ZoneView>(`${V1}/admin/pricing/zones/${id}`, input) : api.post<ZoneView>(`${V1}/admin/pricing/zones`, input),
+  );
+}
+
+export function usePricingSettings() {
+  return useQuery({ queryKey: ["pricing", "settings"], queryFn: () => api.get<SettingsView>(`${V1}/admin/pricing/settings`) });
+}
+
+export function useSetPricingSetting() {
+  return usePricingMutation(({ setting, value }: { setting: "fuel-index" | "exchange-rate"; value: number }) =>
+    api.put<SettingView>(`${V1}/admin/pricing/settings/${setting}`, { value }),
+  );
+}
+
+export type QuoteLocation = { placeId?: string; latitude?: number; longitude?: number };
+
+export function useCreateQuote() {
+  return useMutation({
+    mutationFn: (input: { pickup: QuoteLocation; dropoff: QuoteLocation; vehicleClass: VehicleClass; pickupAt?: string; corporateId?: string }) =>
+      api.post<QuoteView>(`${V1}/quotes`, input),
+  });
 }

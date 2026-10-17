@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMe } from "@/lib/api/hooks";
-import { adminNav } from "./nav";
+import { navGroups } from "./nav";
 import { SessionProvider, useSession } from "./session";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -67,7 +67,8 @@ function AppSidebar() {
   const pathname = usePathname();
   const session = useSession();
   // Most specific match wins, so /drivers/new does not also highlight /drivers.
-  const active = adminNav
+  const active = navGroups
+    .flatMap((group) => group.items)
     .filter((item) => pathname === item.href || pathname.startsWith(item.href + "/"))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
@@ -78,27 +79,27 @@ function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{t("app.area.admin")}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminNav
-                .filter((item) => session.can(item.permission))
-                .map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={active === item.href}
-                      tooltip={t(item.label)}
-                      render={<Link href={item.href} />}
-                    >
-                      <item.icon />
-                      <span>{t(item.label)}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {navGroups.map((group) => {
+          const items = group.items.filter((item) => session.can(item.permission));
+          if (items.length === 0) return null;
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {items.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton isActive={active === item.href} tooltip={t(item.label)} render={<Link href={item.href} />}>
+                        <item.icon />
+                        <span>{t(item.label)}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>

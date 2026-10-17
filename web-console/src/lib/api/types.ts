@@ -64,3 +64,18 @@ export const DAYS: DayOfWeek[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", 
 export const PLACE_TYPES: PlaceType[] = [
   "AIRPORT", "HOTEL", "MALL", "MARKET", "HOSPITAL", "SCHOOL", "EMBASSY", "OFFICE", "LANDMARK", "TRANSPORT", "OTHER",
 ];
+
+export type RuleView = Model<"RuleView">;
+export type PriceLineView = Model<"PriceLineView">;
+export type HistoryEntryView = Model<"HistoryEntryView">;
+export type ZoneView = Model<"ZoneView">;
+export type SettingView = Model<"SettingView">;
+export type SettingsView = Model<"SettingsView">;
+export type QuoteView = Model<"QuoteView">;
+export type QuoteLineView = Model<"QuoteLineView">;
+
+export type ZoneType = NonNullable<Schemas["ZoneView"]["type"]>;
+export type QuoteLineType = NonNullable<Schemas["QuoteLineView"]["type"]>;
+export type LatLng = { latitude: number; longitude: number };
+
+export const ZONE_TYPES: ZoneType[] = ["CITY", "AIRPORT", "RESTRICTED"];

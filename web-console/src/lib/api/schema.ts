@@ -17,7 +17,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
          */
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         /**
          * Create a corporate account
@@ -25,7 +25,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        post: operations["create_2"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -45,14 +45,14 @@ export interface paths {
          *
          *     **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
          */
-        get: operations["get_2"];
+        get: operations["get_3"];
         /**
          * Edit a corporate account
          * @description Replaces the editable fields; `version` must match.
          *
          *     **Roles:** ADMIN
          */
-        put: operations["update_3"];
+        put: operations["update_4"];
         post?: never;
         delete?: never;
         options?: never;
@@ -139,7 +139,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -161,7 +161,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         /**
          * Register a driver
@@ -189,7 +189,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["get_3"];
+        get: operations["get_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -201,7 +201,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        patch: operations["update_4"];
+        patch: operations["update_5"];
         trace?: never;
     };
     "/api/v1/admin/drivers/{driverId}/approve": {
@@ -503,7 +503,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER
          */
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         /**
          * Create a place
@@ -511,7 +511,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER
          */
-        post: operations["create_1"];
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -529,14 +529,14 @@ export interface paths {
          * Get a place
          * @description **Roles:** ADMIN, DISPATCHER
          */
-        get: operations["get_1"];
+        get: operations["get_2"];
         /**
          * Edit a place
          * @description Names, pin, type, pickup notes and `verified`; `version` must match.
          *
          *     **Roles:** ADMIN, DISPATCHER
          */
-        put: operations["update_2"];
+        put: operations["update_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -560,6 +560,240 @@ export interface paths {
          *     **Roles:** ADMIN
          */
         post: operations["merge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/cities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cities
+         * @description City codes rules and zones can use.
+         *
+         *     **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["cities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Price lines
+         * @description One entry per city × vehicle class with the version in force now and upcoming ones. Without `corporateId`: city prices; with it: that company's overrides.
+         *
+         *     **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["lines"];
+        put?: never;
+        /**
+         * Create a rule version
+         * @description Adds a version to the line (city + vehicle class, optionally `corporateId`). It is in force from `validFrom` (default now; not in the past) until `validTo` or the next version. Existing versions are never changed. Money in minor units of `currency`; `fuelIndexFactor` 0–2, `maxSurge` 1–5.
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["create_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/rules/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version history of one line
+         * @description Newest first, with when each version is in force.
+         *
+         *     **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/rules/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a line
+         * @description From `validFrom` (default now) the line has no price: a company override then falls back to the city price; a city line can no longer be quoted.
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["retire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/rules/{ruleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One rule version
+         * @description **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["rule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fuel index and exchange rate
+         * @description Current values and the last 50 changes of each.
+         *
+         *     **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/settings/exchange-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the USD→KHR exchange rate
+         * @description Riel per US dollar, 1000–10000. Applies to new quotes.
+         *
+         *     **Roles:** ADMIN
+         */
+        put: operations["setExchangeRate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/settings/fuel-index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the fuel index
+         * @description 1.000 = the fuel price the rules were set at; 1.080 = 8 % higher. Range 0.5–3, three decimals. Applies to new quotes, weighted by each rule's `fuelIndexFactor`.
+         *
+         *     **Roles:** ADMIN
+         */
+        put: operations["setFuelIndex"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/zones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Zones
+         * @description All zones (active and inactive), optionally of one city.
+         *
+         *     **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["list_2"];
+        put?: never;
+        /**
+         * Create a zone
+         * @description `polygon`: 3–500 points inside Cambodia, lines must not cross (`pricing.zone-invalid`). AIRPORT needs `surchargeMinor` + `surchargeCurrency`; other types ignore them.
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/zones/{zoneId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One zone
+         * @description **Roles:** ADMIN, DISPATCHER, SUPPORT
+         */
+        get: operations["get_1"];
+        /**
+         * Edit a zone
+         * @description Shape, names, type, surcharge, active; `version` must match. Existing quotes keep the surcharge they were given.
+         *
+         *     **Roles:** ADMIN
+         */
+        put: operations["update_2"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -946,7 +1180,7 @@ export interface paths {
          * Save a place
          * @description HOME and OFFICE once each (`place.saved-label-taken`); CUSTOM needs `customLabel`. Give a landmark `placeId`, or your own `latitude`/`longitude` with a `note` (e.g. a house).
          */
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -986,6 +1220,46 @@ export interface paths {
          * @description Fuzzy match on Khmer and English names (partial words and small typos). With `lat`/`lng`, nearer places rank higher and `distanceMeters` is returned. `limit` 1–30 (default 10).
          */
         get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get a fare quote
+         * @description Pickup and drop-off as a landmark (`placeId`) or a map position. One end must be in our service area; the price is the version in force at `pickupAt` (default now): with `corporateId`, the company's override if it has one, else the city price. The quote is stored and never changes; it can be booked until `expiresAt`. `corporateId` needs staff or that company's admin/booker.
+         */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quoteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A quote
+         * @description Your own quotes; staff see all.
+         */
+        get: operations["get_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1128,6 +1402,16 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        CreateQuoteRequest: {
+            /** Format: uuid */
+            corporateId?: string;
+            dropoff: components["schemas"]["LocationRequest"];
+            pickup: components["schemas"]["LocationRequest"];
+            /** Format: date-time */
+            pickupAt?: string;
+            /** @enum {string} */
+            vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+        };
         DocumentUpload: {
             /**
              * Format: binary
@@ -1234,6 +1518,12 @@ export interface components {
             /** Format: int32 */
             sizeBytes?: number;
         };
+        HistoryEntryView: {
+            /** Format: date-time */
+            effectiveUntil?: string;
+            period?: string;
+            rule?: components["schemas"]["RuleView"];
+        };
         HistoryView: {
             /** Format: uuid */
             actorUserId?: string;
@@ -1253,6 +1543,28 @@ export interface components {
             from?: string;
             /** Format: time-local */
             to?: string;
+        };
+        LatLng: {
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+        };
+        LocationRequest: {
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: uuid */
+            placeId?: string;
+        };
+        LocationView: {
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: uuid */
+            placeId?: string;
         };
         Me: {
             fullName?: string;
@@ -1293,6 +1605,11 @@ export interface components {
             intoPlaceId: string;
         };
         Money: {
+            /** Format: int64 */
+            amountMinor?: number;
+            currency?: string;
+        };
+        MoneyView: {
             /** Format: int64 */
             amountMinor?: number;
             currency?: string;
@@ -1364,6 +1681,11 @@ export interface components {
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
+        };
+        PersonView: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
         };
         PlaceHit: {
             /** Format: double */
@@ -1442,6 +1764,16 @@ export interface components {
             expiresAt?: string;
             url?: string;
         };
+        PriceLineView: {
+            city?: string;
+            /** Format: uuid */
+            corporateId?: string;
+            current?: components["schemas"]["RuleView"];
+            latest?: components["schemas"]["RuleView"];
+            upcoming?: components["schemas"]["RuleView"][];
+            /** @enum {string} */
+            vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+        };
         /** @description RFC 7807 problem details. Extra members (e.g. `missing`, `errors`) depend on `code`. */
         Problem: {
             /**
@@ -1464,6 +1796,53 @@ export interface components {
         QueueItem: {
             document?: components["schemas"]["DocumentView"];
             driver?: components["schemas"]["DriverBrief"];
+        };
+        QuoteLineView: {
+            /** Format: int64 */
+            amountMinor?: number;
+            /** Format: int64 */
+            equivalentMinor?: number;
+            /** @enum {string} */
+            type?: "BASE" | "DISTANCE" | "TIME" | "FUEL_INDEX" | "SURGE" | "MINIMUM_FARE" | "AIRPORT" | "ROUNDING";
+        };
+        QuoteView: {
+            /** Format: uuid */
+            airportZoneId?: string;
+            breakdown?: components["schemas"]["QuoteLineView"][];
+            city?: string;
+            /** Format: uuid */
+            corporateId?: string;
+            corporateOverride?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+            currency?: string;
+            /** Format: int64 */
+            distanceMeters?: number;
+            dropoff?: components["schemas"]["LocationView"];
+            /** Format: int64 */
+            durationSeconds?: number;
+            equivalent?: components["schemas"]["MoneyView"];
+            /** Format: date-time */
+            eta?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            fuelIndex?: number;
+            /** Format: uuid */
+            id?: string;
+            pickup?: components["schemas"]["LocationView"];
+            /** Format: date-time */
+            pickupAt?: string;
+            /** @enum {string} */
+            routingSource?: "OSRM" | "STRAIGHT_LINE";
+            /** Format: uuid */
+            ruleId?: string;
+            serviceFee?: components["schemas"]["ServiceFeeView"];
+            surge?: number;
+            /** Format: int64 */
+            totalMinor?: number;
+            usdKhrRate?: number;
+            /** @enum {string} */
+            vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
         ReadinessView: {
             expired?: string[];
@@ -1490,11 +1869,70 @@ export interface components {
             /** @enum {string} */
             preferredLanguage?: "KM" | "EN";
         };
+        RetireRequest: {
+            city: string;
+            /** Format: uuid */
+            corporateId?: string;
+            /** Format: date-time */
+            validFrom?: string;
+            /** @enum {string} */
+            vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+        };
         RoleGrant: {
             /** @enum {string} */
             role?: "PASSENGER" | "DRIVER" | "CORPORATE_ADMIN" | "CORPORATE_BOOKER" | "DISPATCHER" | "SUPPORT" | "SAFETY_OFFICER" | "ADMIN";
             /** Format: uuid */
             scopeId?: string;
+        };
+        RuleRequest: {
+            /** Format: int64 */
+            baseMinor: number;
+            city: string;
+            /** Format: uuid */
+            corporateId?: string;
+            currency: string;
+            fuelIndexFactor: number;
+            maxSurge: number;
+            /** Format: int64 */
+            minFareMinor: number;
+            /** Format: int64 */
+            perKmMinor: number;
+            /** Format: int64 */
+            perMinMinor: number;
+            /** Format: date-time */
+            validFrom?: string;
+            /** Format: date-time */
+            validTo?: string;
+            /** @enum {string} */
+            vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+        };
+        RuleView: {
+            active?: boolean;
+            /** Format: int64 */
+            baseMinor?: number;
+            city?: string;
+            /** Format: uuid */
+            corporateId?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            createdBy?: components["schemas"]["PersonView"];
+            currency?: string;
+            fuelIndexFactor?: number;
+            /** Format: uuid */
+            id?: string;
+            maxSurge?: number;
+            /** Format: int64 */
+            minFareMinor?: number;
+            /** Format: int64 */
+            perKmMinor?: number;
+            /** Format: int64 */
+            perMinMinor?: number;
+            /** Format: date-time */
+            validFrom?: string;
+            /** Format: date-time */
+            validTo?: string;
+            /** @enum {string} */
+            vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
         SavedRequest: {
             customLabel?: string;
@@ -1522,6 +1960,30 @@ export interface components {
             place?: components["schemas"]["PlaceSummary"];
             /** Format: int64 */
             version?: number;
+        };
+        ServiceFeeView: {
+            /** Format: int64 */
+            amountMinor?: number;
+            /** Format: int64 */
+            equivalentMinor?: number;
+            pct?: number;
+        };
+        SettingRequest: {
+            value: number;
+        };
+        SettingView: {
+            /** Format: date-time */
+            changedAt?: string;
+            changedBy?: components["schemas"]["PersonView"];
+            configuredDefault?: boolean;
+            setting?: string;
+            value?: number;
+        };
+        SettingsView: {
+            fuelIndex?: components["schemas"]["SettingView"];
+            fuelIndexHistory?: components["schemas"]["SettingView"][];
+            usdKhrRate?: components["schemas"]["SettingView"];
+            usdKhrRateHistory?: components["schemas"]["SettingView"][];
         };
         SuspendRequest: {
             /** Format: date-time */
@@ -1638,6 +2100,20 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        UpdateZoneRequest: {
+            active?: boolean;
+            city: string;
+            nameEn?: string;
+            nameKm?: string;
+            polygon: components["schemas"]["LatLng"][];
+            surchargeCurrency?: string;
+            /** Format: int64 */
+            surchargeMinor?: number;
+            /** @enum {string} */
+            type: "CITY" | "AIRPORT" | "RESTRICTED";
+            /** Format: int64 */
+            version: number;
+        };
         VehicleBrief: {
             plateNumber?: string;
             /** @enum {string} */
@@ -1691,6 +2167,36 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        ZoneRequest: {
+            active?: boolean;
+            city: string;
+            nameEn?: string;
+            nameKm?: string;
+            polygon: components["schemas"]["LatLng"][];
+            surchargeCurrency?: string;
+            /** Format: int64 */
+            surchargeMinor?: number;
+            /** @enum {string} */
+            type: "CITY" | "AIRPORT" | "RESTRICTED";
+        };
+        ZoneView: {
+            active?: boolean;
+            city?: string;
+            /** Format: uuid */
+            id?: string;
+            nameEn?: string;
+            nameKm?: string;
+            polygon?: components["schemas"]["LatLng"][];
+            surchargeCurrency?: string;
+            /** Format: int64 */
+            surchargeMinor?: number;
+            /** @enum {string} */
+            type?: "CITY" | "AIRPORT" | "RESTRICTED";
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -1700,7 +2206,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_4: {
+    list_5: {
         parameters: {
             query?: {
                 q?: string;
@@ -1746,7 +2252,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    create_5: {
         parameters: {
             query?: never;
             header?: {
@@ -1820,7 +2326,7 @@ export interface operations {
             };
         };
     };
-    get_2: {
+    get_3: {
         parameters: {
             query?: never;
             header?: {
@@ -1872,7 +2378,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: {
@@ -2212,7 +2718,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: {
                 status?: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUPERSEDED";
@@ -2258,7 +2764,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: {
                 status?: "PENDING" | "DOCS_SUBMITTED" | "TRAINING" | "APPROVED" | "REJECTED" | "SUSPENDED";
@@ -2380,7 +2886,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    get_4: {
         parameters: {
             query?: never;
             header?: {
@@ -2432,7 +2938,7 @@ export interface operations {
             };
         };
     };
-    update_4: {
+    update_5: {
         parameters: {
             query?: never;
             header?: {
@@ -3581,7 +4087,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: {
                 q?: string;
@@ -3628,7 +4134,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_4: {
         parameters: {
             query?: never;
             header?: {
@@ -3702,7 +4208,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: {
@@ -3754,7 +4260,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: {
@@ -3866,6 +4372,780 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PlaceView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cities: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    lines: {
+        parameters: {
+            query?: {
+                city?: string;
+                vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+                corporateId?: string;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PriceLineView"][];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_3: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    history: {
+        parameters: {
+            query: {
+                city: string;
+                vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+                corporateId?: string;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HistoryEntryView"][];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    retire: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetireRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rule: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                ruleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    settings: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SettingsView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setExchangeRate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SettingView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setFuelIndex: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SettingView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: {
+                city?: string;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ZoneView"][];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ZoneView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ZoneView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateZoneRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ZoneView"];
                 };
             };
             /** @description Invalid request (`code` explains why) */
@@ -5328,7 +6608,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: {
@@ -5567,6 +6847,123 @@ export interface operations {
             };
             /** @description Missing, invalid or expired access token */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateQuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuoteView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `pricing.outside-service-area`, `pricing.restricted-zone` (`end`), `pricing.no-rule`, `pricing.no-route` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `pricing.routing-unavailable`: no quote without a road route */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_5: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuoteView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

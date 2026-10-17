@@ -30,7 +30,7 @@ import { MergeDialog } from "./merge-dialog";
 import { VerifiedMark } from "./place-list";
 
 // MapLibre needs the browser (WebGL, window); never render it on the server.
-const PlaceMap = dynamic(() => import("./place-map"), { ssr: false, loading: () => <Skeleton className="h-full min-h-80 w-full" /> });
+const PlaceMap = dynamic(() => import("@/features/maps/place-map"), { ssr: false, loading: () => <Skeleton className="h-full min-h-80 w-full" /> });
 
 /** Central Phnom Penh (Independence Monument): where a new pin starts. */
 const PHNOM_PENH = { latitude: 11.5564, longitude: 104.9282 };

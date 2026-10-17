@@ -25,6 +25,7 @@ import { useDates } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { AccountFields, toAccountInput, useAccountForm } from "./account-form";
 import { AccountStatusBadge } from "./account-status-badge";
+import { CorporateOverrides } from "@/features/pricing/corporate-overrides";
 import { CostCentersTab } from "./cost-centers-tab";
 import { MemberDialog } from "./member-dialog";
 import { PolicySummary } from "./policy-editor";
@@ -78,11 +79,15 @@ export function CorporateDetail({ corporateId }: { corporateId: string }) {
           <TabsTrigger value="overview">{t("corporates.overview")}</TabsTrigger>
           <TabsTrigger value="members">{t("members.title")}</TabsTrigger>
           <TabsTrigger value="costCenters">{t("costCenters.title")}</TabsTrigger>
+          {session.can("viewPricing") && <TabsTrigger value="prices">{t("rules.overridesTab")}</TabsTrigger>}
           <TabsTrigger value="history">{t("corporates.history")}</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="pt-3"><Overview detail={detail.data} /></TabsContent>
         <TabsContent value="members" className="pt-3"><MembersTab account={a} canManage={canManage} /></TabsContent>
         <TabsContent value="costCenters" className="pt-3"><CostCentersTab corporateId={a.id} canManage={canManage} /></TabsContent>
+        {session.can("viewPricing") && (
+          <TabsContent value="prices" className="pt-3"><CorporateOverrides corporateId={a.id} /></TabsContent>
+        )}
         <TabsContent value="history" className="pt-3"><History detail={detail.data} /></TabsContent>
       </Tabs>
 
