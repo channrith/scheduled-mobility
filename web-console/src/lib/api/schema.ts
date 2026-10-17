@@ -4,6 +4,128 @@
  */
 
 export interface paths {
+    "/api/v1/admin/corporates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List corporate accounts
+         * @description `q` matches legal or display name, or exactly the tax ID.
+         *
+         *     **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
+         */
+        get: operations["list_4"];
+        put?: never;
+        /**
+         * Create a corporate account
+         * @description Money in minor units of `currency` (USD cents or KHR riel). Defaults: 30 payment days, credit limit 0, service fee 8.00 %. `taxId` (TIN) must be unique.
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/corporates/{corporateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Account detail
+         * @description With the number of active members and the status history (reasons).
+         *
+         *     **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
+         */
+        get: operations["get_2"];
+        /**
+         * Edit a corporate account
+         * @description Replaces the editable fields; `version` must match.
+         *
+         *     **Roles:** ADMIN
+         */
+        put: operations["update_3"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/corporates/{corporateId}/admins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a company admin
+         * @description Grants CORPORATE_ADMIN for this company to the phone's user (created if new; an existing member is promoted).
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["addAdmin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/corporates/{corporateId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * SUSPENDED → ACTIVE
+         * @description `reason` (≥ 10 characters).
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["reactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/corporates/{corporateId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * ACTIVE → SUSPENDED
+         * @description `reason` (≥ 10 characters). Rides can no longer be charged to the account.
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["suspend_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/documents": {
         parameters: {
             query?: never;
@@ -17,7 +139,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        get: operations["list_2"];
+        get: operations["list_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -39,7 +161,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["list_1"];
+        get: operations["list_3"];
         put?: never;
         /**
          * Register a driver
@@ -67,7 +189,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["get_1"];
+        get: operations["get_3"];
         put?: never;
         post?: never;
         delete?: never;
@@ -79,7 +201,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        patch: operations["update_1"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/api/v1/admin/drivers/{driverId}/approve": {
@@ -368,6 +490,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List places (admin)
+         * @description Active places by name; filter `verified=false` to find pins still to check.
+         *
+         *     **Roles:** ADMIN, DISPATCHER
+         */
+        get: operations["list_2"];
+        put?: never;
+        /**
+         * Create a place
+         * @description At least one name; the pin must be in Cambodia (`place.outside-cambodia`).
+         *
+         *     **Roles:** ADMIN, DISPATCHER
+         */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/places/{placeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a place
+         * @description **Roles:** ADMIN, DISPATCHER
+         */
+        get: operations["get_1"];
+        /**
+         * Edit a place
+         * @description Names, pin, type, pickup notes and `verified`; `version` must match.
+         *
+         *     **Roles:** ADMIN, DISPATCHER
+         */
+        put: operations["update_2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/places/{placeId}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a duplicate into another place
+         * @description The duplicate stops appearing in search; its saved places and usage move to `intoPlaceId`.
+         *
+         *     **Roles:** ADMIN
+         */
+        post: operations["merge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/vehicles": {
         parameters: {
             query?: never;
@@ -381,7 +579,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         /**
          * Register a vehicle
@@ -414,7 +612,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        put: operations["update"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -497,6 +695,128 @@ export interface paths {
          */
         post: operations["refresh"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/corporates/{corporateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The company's account (read-only)
+         * @description **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
+         */
+        get: operations["account"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/corporates/{corporateId}/cost-centers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cost centres
+         * @description **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
+         */
+        get: operations["costCenters"];
+        put?: never;
+        /**
+         * Add a cost centre
+         * @description `code` is unique within the company (stored uppercase).
+         *
+         *     **Roles:** `@authz.canManageCorporate(#corporateId)`
+         */
+        post: operations["addCostCenter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/corporates/{corporateId}/cost-centers/{costCenterId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rename or (de)activate a cost centre
+         * @description **Roles:** `@authz.canManageCorporate(#corporateId)`
+         */
+        put: operations["updateCostCenter"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/corporates/{corporateId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Members
+         * @description Active members; `includeRemoved=true` adds removed ones.
+         *
+         *     **Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER
+         */
+        get: operations["members"];
+        put?: never;
+        /**
+         * Add a member
+         * @description By phone; an existing user is reused. CORPORATE_ADMIN and CORPORATE_BOOKER get that role for this company; a RIDER rides on the account with a normal passenger login. `policy` limits what the member may book (missing fields = no limit).
+         *
+         *     **Roles:** `@authz.canManageCorporate(#corporateId)`
+         */
+        post: operations["addMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/corporates/{corporateId}/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit a member
+         * @description Role, cost centre, employee reference and policy; `version` must match. The last admin cannot be demoted.
+         *
+         *     **Roles:** `@authz.canManageCorporate(#corporateId)`
+         */
+        put: operations["updateMember"];
+        post?: never;
+        /**
+         * Remove a member
+         * @description Revokes their role for this company. The last admin cannot be removed.
+         *
+         *     **Roles:** `@authz.canManageCorporate(#corporateId)`
+         */
+        delete: operations["removeMember"];
         options?: never;
         head?: never;
         patch?: never;
@@ -612,10 +932,144 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/saved-places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My saved places */
+        get: operations["list"];
+        put?: never;
+        /**
+         * Save a place
+         * @description HOME and OFFICE once each (`place.saved-label-taken`); CUSTOM needs `customLabel`. Give a landmark `placeId`, or your own `latitude`/`longitude` with a `note` (e.g. a house).
+         */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/saved-places/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit a saved place
+         * @description `version` must match.
+         */
+        put: operations["update"];
+        post?: never;
+        /** Delete a saved place */
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search landmarks
+         * @description Fuzzy match on Khmer and English names (partial words and small typos). With `lat`/`lng`, nearer places rank higher and `distanceMeters` is returned. `limit` 1–30 (default 10).
+         */
+        get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountDetail: {
+            account?: components["schemas"]["AccountView"];
+            /** Format: int64 */
+            activeMembers?: number;
+            history?: components["schemas"]["AccountHistoryView"][];
+        };
+        AccountHistoryView: {
+            /** Format: uuid */
+            actorUserId?: string;
+            /** @enum {string} */
+            from?: "ACTIVE" | "SUSPENDED";
+            /** Format: date-time */
+            occurredAt?: string;
+            reason?: string;
+            /** @enum {string} */
+            to?: "ACTIVE" | "SUSPENDED";
+        };
+        AccountReasonRequest: {
+            reason?: string;
+        };
+        AccountRequest: {
+            /** Format: int64 */
+            creditLimitMinor?: number;
+            currency?: string;
+            displayName?: string;
+            legalName: string;
+            /** Format: int32 */
+            paymentTermsDays?: number;
+            serviceFeePct?: number;
+            taxId?: string;
+        };
+        AccountSuspensionView: {
+            reason?: string;
+            /** Format: date-time */
+            suspendedAt?: string;
+            /** Format: uuid */
+            suspendedBy?: string;
+        };
+        AccountView: {
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            creditLimitMinor?: number;
+            currency?: string;
+            displayName?: string;
+            /** Format: uuid */
+            id?: string;
+            legalName?: string;
+            /** Format: int32 */
+            paymentTermsDays?: number;
+            serviceFeePct?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "SUSPENDED";
+            suspension?: components["schemas"]["AccountSuspensionView"];
+            taxId?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        AddAdminRequest: {
+            fullName: string;
+            phone: string;
+        };
+        AddMemberRequest: {
+            /** Format: uuid */
+            costCenterId?: string;
+            employeeRef?: string;
+            fullName: string;
+            phone: string;
+            policy?: components["schemas"]["MemberPolicy"];
+            /** @enum {string} */
+            role: "CORPORATE_ADMIN" | "CORPORATE_BOOKER" | "RIDER";
+        };
         AssignVehicleRequest: {
             /** Format: date-time */
             validFrom?: string;
@@ -654,6 +1108,25 @@ export interface components {
             accountName?: string;
             accountNumberMasked?: string;
             bankName?: string;
+        };
+        CostCenterBrief: {
+            code?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+        };
+        CostCenterRequest: {
+            code: string;
+            name: string;
+        };
+        CostCenterView: {
+            active?: boolean;
+            code?: string;
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            /** Format: int64 */
+            version?: number;
         };
         DocumentUpload: {
             /**
@@ -774,6 +1247,13 @@ export interface components {
             /** @enum {string} */
             to?: "PENDING" | "DOCS_SUBMITTED" | "TRAINING" | "APPROVED" | "REJECTED" | "SUSPENDED";
         };
+        HoursWindow: {
+            days?: ("MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY")[];
+            /** Format: time-local */
+            from?: string;
+            /** Format: time-local */
+            to?: string;
+        };
         Me: {
             fullName?: string;
             /** Format: uuid */
@@ -783,6 +1263,39 @@ export interface components {
             roles?: components["schemas"]["RoleGrant"][];
             /** @enum {string} */
             status?: "ACTIVE" | "SUSPENDED" | "DISABLED";
+        };
+        MemberPolicy: {
+            allowedHours?: components["schemas"]["HoursWindow"][];
+            allowedVehicleClasses?: ("MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN")[];
+            maxFare?: components["schemas"]["Money"];
+        };
+        MemberView: {
+            costCenter?: components["schemas"]["CostCenterBrief"];
+            /** Format: date-time */
+            createdAt?: string;
+            employeeRef?: string;
+            fullName?: string;
+            /** Format: uuid */
+            id?: string;
+            phone?: string;
+            policy?: components["schemas"]["MemberPolicy"];
+            /** @enum {string} */
+            role?: "CORPORATE_ADMIN" | "CORPORATE_BOOKER" | "RIDER";
+            /** @enum {string} */
+            status?: "ACTIVE" | "REMOVED";
+            /** Format: uuid */
+            userId?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        MergeRequest: {
+            /** Format: uuid */
+            intoPlaceId: string;
+        };
+        Money: {
+            /** Format: int64 */
+            amountMinor?: number;
+            currency?: string;
         };
         OtpRequest: {
             phone: string;
@@ -797,8 +1310,30 @@ export interface components {
             code: string;
             phone: string;
         };
+        PageResponseAccountView: {
+            content?: components["schemas"]["AccountView"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         PageResponseDriverSummary: {
             content?: components["schemas"]["DriverSummary"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PageResponsePlaceView: {
+            content?: components["schemas"]["PlaceView"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -829,6 +1364,78 @@ export interface components {
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
+        };
+        PlaceHit: {
+            /** Format: double */
+            distanceMeters?: number;
+            /** Format: uuid */
+            id?: string;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            nameEn?: string;
+            nameKm?: string;
+            pickupNotesEn?: string;
+            pickupNotesKm?: string;
+            /** Format: double */
+            score?: number;
+            /** @enum {string} */
+            type?: "AIRPORT" | "HOTEL" | "MALL" | "MARKET" | "HOSPITAL" | "SCHOOL" | "EMBASSY" | "OFFICE" | "LANDMARK" | "TRANSPORT" | "OTHER";
+            verified?: boolean;
+        };
+        PlaceRequest: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            nameEn?: string;
+            nameKm?: string;
+            pickupNotesEn?: string;
+            pickupNotesKm?: string;
+            /** @enum {string} */
+            type: "AIRPORT" | "HOTEL" | "MALL" | "MARKET" | "HOSPITAL" | "SCHOOL" | "EMBASSY" | "OFFICE" | "LANDMARK" | "TRANSPORT" | "OTHER";
+            verified?: boolean;
+        };
+        PlaceSummary: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            nameEn?: string;
+            nameKm?: string;
+            pickupNotesEn?: string;
+            pickupNotesKm?: string;
+            /** @enum {string} */
+            type?: "AIRPORT" | "HOTEL" | "MALL" | "MARKET" | "HOSPITAL" | "SCHOOL" | "EMBASSY" | "OFFICE" | "LANDMARK" | "TRANSPORT" | "OTHER";
+            verified?: boolean;
+        };
+        PlaceView: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: uuid */
+            mergedInto?: string;
+            nameEn?: string;
+            nameKm?: string;
+            pickupNotesEn?: string;
+            pickupNotesKm?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "MERGED";
+            /** @enum {string} */
+            type?: "AIRPORT" | "HOTEL" | "MALL" | "MARKET" | "HOSPITAL" | "SCHOOL" | "EMBASSY" | "OFFICE" | "LANDMARK" | "TRANSPORT" | "OTHER";
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            usageCount?: number;
+            verified?: boolean;
+            /** Format: int64 */
+            version?: number;
         };
         PreviewUrl: {
             /** Format: date-time */
@@ -889,6 +1496,33 @@ export interface components {
             /** Format: uuid */
             scopeId?: string;
         };
+        SavedRequest: {
+            customLabel?: string;
+            /** @enum {string} */
+            label: "HOME" | "OFFICE" | "CUSTOM";
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            note?: string;
+            /** Format: uuid */
+            placeId?: string;
+        };
+        SavedView: {
+            customLabel?: string;
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            label?: "HOME" | "OFFICE" | "CUSTOM";
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            note?: string;
+            place?: components["schemas"]["PlaceSummary"];
+            /** Format: int64 */
+            version?: number;
+        };
         SuspendRequest: {
             /** Format: date-time */
             noticeAt?: string;
@@ -912,6 +1546,25 @@ export interface components {
             refreshToken?: string;
             tokenType?: string;
         };
+        UpdateAccountRequest: {
+            /** Format: int64 */
+            creditLimitMinor?: number;
+            currency?: string;
+            displayName?: string;
+            legalName: string;
+            /** Format: int32 */
+            paymentTermsDays?: number;
+            serviceFeePct?: number;
+            taxId?: string;
+            /** Format: int64 */
+            version: number;
+        };
+        UpdateCostCenterRequest: {
+            active?: boolean;
+            name: string;
+            /** Format: int64 */
+            version: number;
+        };
         UpdateDriverRequest: {
             bankAccountName?: string;
             bankAccountNumber?: string;
@@ -923,6 +1576,45 @@ export interface components {
             nationalId?: string;
             /** @enum {string} */
             preferredLanguage?: "KM" | "EN";
+            /** Format: int64 */
+            version: number;
+        };
+        UpdateMemberRequest: {
+            /** Format: uuid */
+            costCenterId?: string;
+            employeeRef?: string;
+            policy?: components["schemas"]["MemberPolicy"];
+            /** @enum {string} */
+            role: "CORPORATE_ADMIN" | "CORPORATE_BOOKER" | "RIDER";
+            /** Format: int64 */
+            version: number;
+        };
+        UpdatePlaceRequest: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            nameEn?: string;
+            nameKm?: string;
+            pickupNotesEn?: string;
+            pickupNotesKm?: string;
+            /** @enum {string} */
+            type: "AIRPORT" | "HOTEL" | "MALL" | "MARKET" | "HOSPITAL" | "SCHOOL" | "EMBASSY" | "OFFICE" | "LANDMARK" | "TRANSPORT" | "OTHER";
+            verified?: boolean;
+            /** Format: int64 */
+            version: number;
+        };
+        UpdateSavedRequest: {
+            customLabel?: string;
+            /** @enum {string} */
+            label: "HOME" | "OFFICE" | "CUSTOM";
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            note?: string;
+            /** Format: uuid */
+            placeId?: string;
             /** Format: int64 */
             version: number;
         };
@@ -1008,7 +1700,519 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_2: {
+    list_4: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: "ACTIVE" | "SUSPENDED";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAccountView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountDetail"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_3: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addAdmin: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddAdminRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MemberView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reactivate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    suspend_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_5: {
         parameters: {
             query?: {
                 status?: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUPERSEDED";
@@ -1054,7 +2258,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_3: {
         parameters: {
             query?: {
                 status?: "PENDING" | "DOCS_SUBMITTED" | "TRAINING" | "APPROVED" | "REJECTED" | "SUSPENDED";
@@ -1176,7 +2380,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_3: {
         parameters: {
             query?: never;
             header?: {
@@ -1228,7 +2432,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_4: {
         parameters: {
             query?: never;
             header?: {
@@ -2377,7 +3581,350 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_2: {
+        parameters: {
+            query?: {
+                q?: string;
+                verified?: boolean;
+                type?: "AIRPORT" | "HOTEL" | "MALL" | "MARKET" | "HOSPITAL" | "SCHOOL" | "EMBASSY" | "OFFICE" | "LANDMARK" | "TRANSPORT" | "OTHER";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponsePlaceView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlaceView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                placeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlaceView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                placeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlaceView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    merge: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                placeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlaceView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_1: {
         parameters: {
             query?: {
                 q?: string;
@@ -2550,7 +4097,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: {
@@ -2839,6 +4386,586 @@ export interface operations {
             };
             /** @description `refresh-token.invalid`: unknown, expired, rotated or revoked */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    account: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    costCenters: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CostCenterView"][];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addCostCenter: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CostCenterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CostCenterView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateCostCenter: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+                costCenterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCostCenterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CostCenterView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    members: {
+        parameters: {
+            query?: {
+                includeRemoved?: boolean;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MemberView"][];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addMember: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MemberView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateMember: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MemberView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeMember: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                corporateId: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3156,6 +5283,286 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Me"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SavedView"][];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SavedView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSavedRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SavedView"];
+                };
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    search: {
+        parameters: {
+            query: {
+                q: string;
+                lat?: number;
+                lng?: number;
+                limit?: number;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlaceHit"][];
                 };
             };
             /** @description Missing, invalid or expired access token */

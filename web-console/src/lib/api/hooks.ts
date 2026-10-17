@@ -3,8 +3,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, query } from "./client";
 import type {
-  AuditView, DocumentType, DocumentStatus, DriverDetail, DriverStatus, DriverSummary, DocumentView, Me, Page,
-  PreviewUrl, QueueItem, VehicleClass, VehicleListItem, VehicleStatus, VehicleView,
+  AccountDetail, AccountStatus, AccountView, AuditView, CostCenterView, DocumentType, DocumentStatus, DriverDetail,
+  DriverStatus, DriverSummary, DocumentView, Me, MemberPolicy, MemberRole, MemberView, Page, PlaceHit, PlaceType,
+  PlaceView, PreviewUrl, QueueItem, VehicleClass, VehicleListItem, VehicleStatus, VehicleView,
 } from "./types";
 
 const V1 = "/api/v1";
@@ -16,6 +17,13 @@ export const keys = {
   audit: (id: string) => ["driver", id, "audit"] as const,
   queue: (filters: object) => ["documents", filters] as const,
   vehicles: (filters: object) => ["vehicles", filters] as const,
+  corporates: (filters: object) => ["corporates", filters] as const,
+  corporate: (id: string) => ["corporate", id] as const,
+  members: (id: string) => ["corporate", id, "members"] as const,
+  costCenters: (id: string) => ["corporate", id, "cost-centers"] as const,
+  places: (filters: object) => ["places", filters] as const,
+  place: (id: string) => ["place", id] as const,
+  placeSearch: (q: string) => ["places", "search", q] as const,
 };
 
 export function useMe() {
@@ -171,4 +179,174 @@ export function useSaveVehicle() {
 
 export function fetchPreviewUrl(driverId: string, documentId: string, side: "front" | "back") {
   return api.post<PreviewUrl>(`${V1}/admin/drivers/${driverId}/documents/${documentId}/files/${side}/preview-url`);
+}
+
+// --- Corporate accounts -------------------------------------------------------------------------
+
+export type CorporateFilters = { q?: string; status?: AccountStatus; page: number; size: number };
+
+export function useCorporates(filters: CorporateFilters, enabled = true) {
+  return useQuery({
+    queryKey: keys.corporates(filters),
+    queryFn: () => api.get<Page<AccountView>>(`${V1}/admin/corporates${query(filters)}`),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function useCorporate(id: string) {
+  return useQuery({ queryKey: keys.corporate(id), queryFn: () => api.get<AccountDetail>(`${V1}/admin/corporates/${id}`) });
+}
+
+export function useMembers(corporateId: string) {
+  return useQuery({
+    queryKey: keys.members(corporateId),
+    queryFn: () => api.get<MemberView[]>(`${V1}/corporates/${corporateId}/members`),
+  });
+}
+
+export function useCostCenters(corporateId: string) {
+  return useQuery({
+    queryKey: keys.costCenters(corporateId),
+    queryFn: () => api.get<CostCenterView[]>(`${V1}/corporates/${corporateId}/cost-centers`),
+  });
+}
+
+/** Changes to a company refresh everything about it and the account list. */
+function useCorporateMutation<TVars, TResult>(corporateId: string | undefined, fn: (vars: TVars) => Promise<TResult>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: corporateId ? ["corporate", corporateId] : ["corporate"] });
+      await client.invalidateQueries({ queryKey: ["corporates"] });
+    },
+  });
+}
+
+export type AccountInput = {
+  legalName: string;
+  displayName?: string;
+  taxId?: string;
+  paymentTermsDays: number;
+  creditLimitMinor: number;
+  currency: string;
+  serviceFeePct: number;
+};
+
+export function useSaveCorporate() {
+  return useCorporateMutation(undefined, ({ id, ...input }: AccountInput & { id?: string; version?: number }) =>
+    id ? api.put<AccountView>(`${V1}/admin/corporates/${id}`, input) : api.post<AccountView>(`${V1}/admin/corporates`, input),
+  );
+}
+
+export function useCorporateStatus(id: string) {
+  return useCorporateMutation(id, ({ action, reason }: { action: "suspend" | "reactivate"; reason: string }) =>
+    api.post<AccountView>(`${V1}/admin/corporates/${id}/${action}`, { reason }),
+  );
+}
+
+export function useAddCorporateAdmin() {
+  return useCorporateMutation(undefined, ({ corporateId, ...input }: { corporateId: string; phone: string; fullName: string }) =>
+    api.post<MemberView>(`${V1}/admin/corporates/${corporateId}/admins`, input),
+  );
+}
+
+export type MemberInput = {
+  role: MemberRole;
+  costCenterId?: string;
+  employeeRef?: string;
+  policy?: MemberPolicy;
+};
+
+export function useSaveMember(corporateId: string) {
+  return useCorporateMutation(
+    corporateId,
+    ({ id, ...input }: MemberInput & { id?: string; version?: number; phone?: string; fullName?: string }) =>
+      id
+        ? api.put<MemberView>(`${V1}/corporates/${corporateId}/members/${id}`, input)
+        : api.post<MemberView>(`${V1}/corporates/${corporateId}/members`, input),
+  );
+}
+
+export function useRemoveMember(corporateId: string) {
+  return useCorporateMutation(corporateId, (memberId: string) =>
+    api.del<void>(`${V1}/corporates/${corporateId}/members/${memberId}`),
+  );
+}
+
+export function useSaveCostCenter(corporateId: string) {
+  return useCorporateMutation(
+    corporateId,
+    ({ id, ...input }: { id?: string; version?: number; code?: string; name: string; active?: boolean }) =>
+      id
+        ? api.put<CostCenterView>(`${V1}/corporates/${corporateId}/cost-centers/${id}`, input)
+        : api.post<CostCenterView>(`${V1}/corporates/${corporateId}/cost-centers`, input),
+  );
+}
+
+// --- Places -------------------------------------------------------------------------------------
+
+export type PlaceFilters = { q?: string; verified?: boolean; type?: PlaceType; page: number; size: number };
+
+export function usePlaces(filters: PlaceFilters, enabled = true) {
+  return useQuery({
+    queryKey: keys.places(filters),
+    // `verified=false` must be sent, so it is passed as a string (query() drops `false`).
+    queryFn: () =>
+      api.get<Page<PlaceView>>(
+        `${V1}/admin/places${query({ ...filters, verified: filters.verified === undefined ? undefined : String(filters.verified) })}`,
+      ),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function usePlace(id: string | undefined) {
+  return useQuery({
+    queryKey: keys.place(id ?? ""),
+    queryFn: () => api.get<PlaceView>(`${V1}/admin/places/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function usePlaceSearch(q: string) {
+  return useQuery({
+    queryKey: keys.placeSearch(q),
+    queryFn: () => api.get<PlaceHit[]>(`${V1}/places/search${query({ q, limit: 8 })}`),
+    enabled: q.trim().length >= 2,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export type PlaceInput = {
+  nameKm?: string;
+  nameEn?: string;
+  latitude: number;
+  longitude: number;
+  type: PlaceType;
+  pickupNotesKm?: string;
+  pickupNotesEn?: string;
+  verified: boolean;
+};
+
+function usePlaceMutation<TVars>(fn: (vars: TVars) => Promise<PlaceView>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: async (saved) => {
+      client.setQueryData(keys.place(saved.id), saved);
+      await client.invalidateQueries({ queryKey: ["places"] });
+    },
+  });
+}
+
+export function useSavePlace() {
+  return usePlaceMutation(({ id, ...input }: PlaceInput & { id?: string; version?: number }) =>
+    id ? api.put<PlaceView>(`${V1}/admin/places/${id}`, input) : api.post<PlaceView>(`${V1}/admin/places`, input),
+  );
+}
+
+export function useMergePlace(id: string) {
+  return usePlaceMutation((intoPlaceId: string) => api.post<PlaceView>(`${V1}/admin/places/${id}/merge`, { intoPlaceId }));
 }
