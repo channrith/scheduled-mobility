@@ -95,7 +95,8 @@ class QuoteIT {
 	@Test
 	void cityToAirportQuoteWithBreakdownKhrEquivalentEtaAndExpiry() {
 		api.createRule(usdRule(city, "CAR"));
-		Instant pickupAt = Instant.now().plus(Duration.ofDays(2));
+		// Nanoseconds on purpose (as on Linux): the quote keeps PostgreSQL's microseconds.
+		Instant pickupAt = Instant.now().plus(Duration.ofDays(2)).truncatedTo(java.time.temporal.ChronoUnit.MICROS).plusNanos(789);
 		Map<String, Object> body = request(at(lat - 0.03, lng), at(airportLat, lng), "CAR");
 		body.put("pickupAt", pickupAt.toString());
 
@@ -114,8 +115,10 @@ class QuoteIT {
 		assertThat(q.get("equivalent").get("currency").asString()).isEqualTo("KHR");
 		assertThat(khr % 100).isZero();
 		assertThat(Math.abs(khr - q.get("totalMinor").asLong() * 41)).isLessThanOrEqualTo(50);
+		Instant storedPickup = pickupAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+		assertThat(Instant.parse(q.get("pickupAt").asString())).isEqualTo(storedPickup);
 		assertThat(Instant.parse(q.get("eta").asString()))
-			.isEqualTo(pickupAt.plusSeconds(q.get("durationSeconds").asLong()));
+			.isEqualTo(storedPickup.plusSeconds(q.get("durationSeconds").asLong()));
 		assertThat(Duration.between(Instant.parse(q.get("createdAt").asString()), Instant.parse(q.get("expiresAt").asString())))
 			.isEqualTo(Duration.ofMinutes(15));
 		assertThat(q.get("corporateOverride").asBoolean()).isFalse();
