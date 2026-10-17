@@ -30,6 +30,10 @@ class OsrmRoutingClientTest {
 
 	final AtomicReference<String> lastPath = new AtomicReference<>();
 
+	final AtomicReference<com.sun.net.httpserver.Headers> lastHeaders = new AtomicReference<>();
+
+	ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> logs;
+
 	volatile int status;
 
 	volatile String body;
@@ -43,6 +47,7 @@ class OsrmRoutingClientTest {
 		server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
 		server.createContext("/", exchange -> {
 			lastPath.set(exchange.getRequestURI().toString());
+			lastHeaders.set(exchange.getRequestHeaders());
 			try {
 				Thread.sleep(delayMillis);
 			}
@@ -56,6 +61,9 @@ class OsrmRoutingClientTest {
 			exchange.close();
 		});
 		server.start();
+		logs = new ch.qos.logback.core.read.ListAppender<>();
+		logs.start();
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(OsrmRoutingClient.class)).addAppender(logs);
 		client = new OsrmRoutingClient(URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofMillis(500),
 				JsonMapper.builder().build());
 	}
@@ -63,6 +71,57 @@ class OsrmRoutingClientTest {
 	@AfterEach
 	void stop() {
 		server.stop(0);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(OsrmRoutingClient.class)).detachAppender(logs);
+	}
+
+	String warnings() {
+		return logs.list.stream().map(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+			.collect(java.util.stream.Collectors.joining("\n"));
+	}
+
+	@Test
+	void readsTheResponseTheRealServerSent() {
+		status = 200;
+		// router.project-osrm.org, from the staging droplet (2026-10-17).
+		body = """
+				{"code":"Ok","routes":[{"legs":[{"steps":[],"weight":2159.5,"summary":"","duration":2159.5,"distance":33736.8}],\
+				"weight_name":"routability","weight":2159.5,"duration":2159.5,"distance":33736.8}],"waypoints":[{"hint":"z1zm",\
+				"location":[104.818389,11.54457],"name":"","distance":0.1090896016},{"hint":"elBs","location":[104.935037,11.360608],\
+				"name":"","distance":1.943020456}]}""";
+
+		assertThat(client.route(new LatLng(11.54457, 104.81839), new LatLng(11.36062, 104.93505)))
+			.isEqualTo(new Route(33737, 2160, RoutingSource.OSRM));
+	}
+
+	@Test
+	void speaksPlainHttp11WithoutAnHttp2Upgrade() {
+		status = 200;
+		body = """
+				{"code":"Ok","routes":[{"distance":1,"duration":1}]}""";
+
+		client.route(RIVERSIDE, AIRPORT);
+
+		assertThat(lastHeaders.get().containsKey("Upgrade")).isFalse();
+		assertThat(lastHeaders.get().getFirst("User-Agent")).startsWith("scheduled-mobility/");
+	}
+
+	@Test
+	void failuresAreLoggedWithTheirCause() {
+		status = 502;
+		body = "<html>Bad gateway</html>";
+		assertThatThrownBy(() -> client.route(RIVERSIDE, AIRPORT)).isInstanceOf(RoutingException.class);
+		assertThat(warnings()).contains("answered HTTP 502").contains("Bad gateway").contains("127.0.0.1");
+
+		status = 200;
+		body = "not json";
+		assertThatThrownBy(() -> client.route(RIVERSIDE, AIRPORT)).isInstanceOf(RoutingException.class);
+		assertThat(warnings()).contains("not JSON");
+
+		body = """
+				{"code":"Ok","routes":[{"distance":1,"duration":1}]}""";
+		delayMillis = 1500;
+		assertThatThrownBy(() -> client.route(RIVERSIDE, AIRPORT)).isInstanceOf(RoutingException.class);
+		assertThat(warnings()).contains("did not answer").containsIgnoringCase("timeout");
 	}
 
 	@Test
