@@ -13,7 +13,8 @@ Staging runs everything on one DigitalOcean droplet with Docker Compose (`deploy
 | Images | `ghcr.io/channrith/scheduled-mobility/{core-app,location-service,web-console}:<commit SHA>`, built by CI on `main` after the backend and console checks pass |
 | Server directory | `/opt/mobility`, owned by the `deploy` user. `.env` there holds every secret and exists nowhere else |
 
-**Test data only.** Staging sets `OTP_FIXED_CODE=1234`: anyone who knows a phone number can log in as that
+**Test data only.** Staging sets a fixed OTP code (`OTP_FIXED_CODE`, kept only in the droplet's `.env`;
+never write its value in this public repo): anyone who knows the code and a phone number can log in as that
 user, including the admin. Never enter real ID numbers, bank accounts or documents, in the API or in the admin
 console. Real driver onboarding waits for a production environment.
 
@@ -137,7 +138,7 @@ curl -X POST https://api.146-190-4-99.sslip.io/api/v1/auth/otp/request \
   -H 'Content-Type: application/json' -d '{"phone":"<BOOTSTRAP_ADMIN_PHONE>"}'
 curl -X POST https://api.146-190-4-99.sslip.io/api/v1/auth/otp/verify \
   -H 'Content-Type: application/json' -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"phone":"<BOOTSTRAP_ADMIN_PHONE>","code":"1234"}'           # accessToken; /api/v1/me shows ADMIN
+  -d '{"phone":"<BOOTSTRAP_ADMIN_PHONE>","code":"<OTP_FIXED_CODE>"}'           # accessToken; /api/v1/me shows ADMIN
 ```
 
 ## Day-to-day operations
