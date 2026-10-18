@@ -3,7 +3,8 @@
 Written 2026-10-17. For a new Claude Code session that needs Prompt 4's context without the earlier
 conversation. Status: **done.** Plan approved 2026-10-17 (all recommendations); implemented, tested and
 committed in `6d4e4e3` (backend and console in one commit), pushed to `main`. Read this file and `CLAUDE.md`;
-open follow-ups are in section 8. Prompt 3's context is in `docs/handover-prompt3-corporate-place.md`.
+open follow-ups are in section 8. Prompt 3's context is in `docs/handover-prompt3-corporate-place.md`;
+Prompt 5 (booking) followed: `docs/handover-prompt5-booking.md`.
 
 ---
 
