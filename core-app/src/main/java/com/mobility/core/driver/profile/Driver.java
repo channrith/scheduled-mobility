@@ -263,6 +263,18 @@ public class Driver {
 		requireDocumentsValid(readiness);
 	}
 
+	void requireAvailabilityApproved() {
+		if (status != APPROVED) {
+			throw new ApiException(HttpStatus.CONFLICT, "availability.approval-required")
+				.withProperty("driverStatus", status);
+		}
+	}
+
+	void requireAvailable(Readiness readiness) {
+		requireAvailabilityApproved();
+		requireDispatchReady(readiness);
+	}
+
 	private static String requireReason(String reason) {
 		String trimmed = reason == null ? "" : reason.strip();
 		if (trimmed.length() < MIN_REASON_LENGTH) {

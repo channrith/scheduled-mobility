@@ -67,7 +67,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["get_1"];
+        get: operations["get_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -79,7 +79,7 @@ export interface paths {
          *
          *     **Roles:** ADMIN
          */
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/api/v1/admin/drivers/{driverId}/approve": {
@@ -407,14 +407,14 @@ export interface paths {
          * Get a vehicle
          * @description **Roles:** ADMIN, DISPATCHER, SUPPORT, SAFETY_OFFICER
          */
-        get: operations["get"];
+        get: operations["get_1"];
         /**
          * Edit a vehicle
          * @description Replaces all editable fields. `version` must match (`concurrent-update` otherwise). A vehicle with a current or future assignment cannot be set INACTIVE.
          *
          *     **Roles:** ADMIN
          */
-        put: operations["update"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -544,6 +544,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/drivers/me/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My driver availability
+         * @description Reads live availability independently of onboarding status and GPS freshness. No stored state returns UNAVAILABLE, version 0 and updatedAt null. The response must not be cached.
+         *
+         *     **Roles:** DRIVER
+         */
+        get: operations["get"];
+        /**
+         * Set my driver availability
+         * @description Requires Idempotency-Key; reuse the same key and identical body to retry one operation. AVAILABLE requires APPROVED onboarding and current dispatch readiness. UNAVAILABLE does not. expectedVersion must match even for an unchanged status. Actual changes increment version; unchanged status preserves version and updatedAt. GPS freshness is separate. Availability mutation and idempotency response caching are separate Redis operations: if caching fails after a save, retry may return idempotency.in-progress or concurrent-update; GET availability to reconcile. Responses must not be cached.
+         *
+         *     **Roles:** DRIVER
+         */
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/drivers/me/documents": {
         parameters: {
             query?: never;
@@ -649,6 +677,17 @@ export interface components {
             occurredAt?: string;
             targetId?: string;
             targetType?: string;
+        };
+        AvailabilityResponse: {
+            /** @enum {string} */
+            status?: "AVAILABLE" | "UNAVAILABLE";
+            /**
+             * Format: date-time
+             * @description Last stored update, or null when no availability has been recorded
+             */
+            updatedAt?: string | null;
+            /** Format: int64 */
+            version?: number;
         };
         BankAccountView: {
             accountName?: string;
@@ -911,6 +950,12 @@ export interface components {
             refreshExpiresIn?: number;
             refreshToken?: string;
             tokenType?: string;
+        };
+        UpdateAvailabilityRequest: {
+            /** Format: int64 */
+            expectedVersion: number;
+            /** @enum {string} */
+            status: "AVAILABLE" | "UNAVAILABLE";
         };
         UpdateDriverRequest: {
             bankAccountName?: string;
@@ -1176,7 +1221,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: {
@@ -1228,7 +1273,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: {
@@ -2498,7 +2543,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_1: {
         parameters: {
             query?: never;
             header?: {
@@ -2550,7 +2595,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: {
@@ -2934,6 +2979,157 @@ export interface operations {
             };
             /** @description Authenticated, but not allowed (role or scope) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AvailabilityResponse"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `driver.not-found`: no driver for the signed-in user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `availability.unavailable`: Redis is unavailable or stored state is invalid */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required, 1–255 characters. Reuse the same key and identical body for retries of one operation. */
+                "Idempotency-Key": string;
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AvailabilityResponse"];
+                };
+            };
+            /** @description Invalid status/expectedVersion or missing/invalid Idempotency-Key */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `driver.not-found`: no driver for the signed-in user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `concurrent-update`: GET the latest version; `idempotency.in-progress`: retry the same operation shortly. `availability.approval-required`: complete onboarding or resolve suspension. `driver.vehicle-required`: obtain an active vehicle assignment. `driver.documents-missing`, `driver.documents-not-approved`, `driver.documents-expired`: upload or renew the listed documents, or await approval. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `availability.unavailable` or `idempotency.unavailable`: Redis failure or invalid state; GET to reconcile before a new operation */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

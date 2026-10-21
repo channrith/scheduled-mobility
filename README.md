@@ -23,6 +23,41 @@ schema of the same name (created by `core-app/src/main/resources/db/migration/V1
 
 Maven is not required: use the wrapper `./mvnw`.
 
+## Driver availability
+
+`GET /api/v1/drivers/me/availability` reads the signed-in driver's choice from Redis. An absent hash
+returns `UNAVAILABLE`, version `0`, and `updatedAt: null`. This choice is independent of GPS freshness
+and onboarding status. Availability responses use `Cache-Control: no-store`.
+
+`PUT /api/v1/drivers/me/availability` requires a DRIVER token, an `Idempotency-Key` (1–255 characters),
+and a JSON body such as `{"status":"AVAILABLE","expectedVersion":0}`. Read the current version first.
+AVAILABLE requires APPROVED onboarding, current approved/unexpired required documents, and a currently
+assigned ACTIVE vehicle with valid required documents. UNAVAILABLE bypasses eligibility checks.
+
+Redis Lua compares the expected version and updates the hash atomically. An actual status change adds
+one to the version and records server time. Matching-version requests for the current status preserve
+the version and timestamp; choosing UNAVAILABLE for missing state does not create a hash. The hash has
+no expiry. Stale versions return `409 concurrent-update`; reload with GET before a new operation.
+
+Readiness errors use `availability.approval-required` (with `driverStatus`), `driver.vehicle-required`,
+or the existing document errors with `missing`, `pendingReview`, or `expired` document lists. The app
+can direct the driver to complete approval/contact support, obtain a vehicle assignment, upload or
+renew documents, or await document approval. Error details support English and Khmer.
+
+For a retry of one operation, reuse the same Idempotency-Key **and identical body**. A cached replay
+returns the original response with `Idempotent-Replayed: true`, even if availability changed later.
+Changing the body with the same key returns 422. Use a new key for a new operation.
+Unsupported-method responses (405) are not cached. An older cached 405 for the same key and identical
+body is atomically replaced with a new execution lock, allowing a retry after the route becomes available.
+
+The availability mutation and encrypted response cache are separate Redis operations. If the process
+fails or caching fails after the mutation, the saved availability can survive without a cached response:
+the retry can return `idempotency.in-progress` until its lock expires, then `concurrent-update`. Redis
+failures return 503 (`availability.unavailable` or `idempotency.unavailable`). GET to reconcile an uncertain
+result before starting a new operation; the version check prevents a duplicate change. Eligibility in
+PostgreSQL and the Redis mutation also do not form a cross-store transaction: eligibility is checked
+immediately before updating, and this endpoint does not continuously enforce it after the driver's choice.
+
 ## Run locally
 
 To start both backends with `.env` loaded and the `local` profile:

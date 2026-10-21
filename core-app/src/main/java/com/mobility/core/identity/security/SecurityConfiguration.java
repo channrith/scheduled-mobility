@@ -40,6 +40,8 @@ class SecurityConfiguration {
 			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/v1/auth/**").permitAll()
+				// Also guard cached availability replays, which do not invoke controller method security.
+				.requestMatchers("/api/v1/drivers/me/availability").hasRole("DRIVER")
 				// Signed, short-lived document links: the token in the URL is the authorization.
 				.requestMatchers(HttpMethod.GET, "/api/v1/document-previews/*").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

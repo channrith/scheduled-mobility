@@ -15,6 +15,7 @@ import com.mobility.core.driver.document.DocumentType;
 import com.mobility.core.driver.document.DriverDocument;
 import com.mobility.core.driver.vehicle.VehicleService;
 import com.mobility.core.driver.vehicle.VehicleView;
+import com.mobility.core.driver.vehicle.VehicleStatus;
 import com.mobility.core.shared.time.BusinessTime;
 import org.springframework.stereotype.Component;
 
@@ -46,7 +47,8 @@ class ReadinessCalculator {
 
 	private Readiness compute(UUID driverId, boolean includeVehicle) {
 		List<DriverDocument> current = documents.currentDocuments(driverId);
-		Optional<UUID> vehicleId = vehicles.activeVehicle(driverId).map(VehicleView::id);
+		Optional<UUID> vehicleId = vehicles.activeVehicle(driverId)
+			.filter(vehicle -> vehicle.status() == VehicleStatus.ACTIVE).map(VehicleView::id);
 		LocalDate today = BusinessTime.today(clock);
 
 		Set<DocumentType> required = EnumSet.copyOf(DocumentType.DRIVER_REQUIRED);

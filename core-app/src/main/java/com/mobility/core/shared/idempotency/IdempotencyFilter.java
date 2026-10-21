@@ -23,6 +23,10 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.dao.DataAccessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -40,12 +44,14 @@ import tools.jackson.databind.json.JsonMapper;
  * <ul>
  * <li>same key, different body → 422</li>
  * <li>same key while the first request is still running → 409</li>
- * <li>5xx, 408, 409 and 429 responses are not stored, so the client can retry them</li>
+ * <li>5xx, 405, 408, 409 and 429 responses are not stored, so the client can retry them</li>
  * </ul>
  * Runs after Spring Security (default filter order), so the caller is known.
  */
 @Component
 class IdempotencyFilter extends OncePerRequestFilter {
+
+	private static final Logger log = LoggerFactory.getLogger(IdempotencyFilter.class);
 
 	static final String HEADER = "Idempotency-Key";
 
@@ -53,7 +59,14 @@ class IdempotencyFilter extends OncePerRequestFilter {
 
 	private static final Set<String> METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
-	private static final Set<Integer> NOT_STORED = Set.of(408, 409, 429);
+	private static final Set<Integer> NOT_STORED = Set.of(405, 408, 409, 429);
+
+	/** Replace only the exact cached 405 we read; never delete another request's lock or result. */
+	private static final DefaultRedisScript<Long> RECLAIM_UNSUPPORTED = new DefaultRedisScript<>("""
+			if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+			redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3])
+			return 1
+			""", Long.class);
 
 	private final StringRedisTemplate redis;
 
@@ -75,7 +88,8 @@ class IdempotencyFilter extends OncePerRequestFilter {
 	}
 
 	/** state is IN_PROGRESS or DONE. */
-	record Entry(String state, String fingerprint, int status, String contentType, String location, String body) {
+	record Entry(String state, String fingerprint, int status, String contentType, String location, String body,
+			String cacheControl) {
 	}
 
 	@Override
@@ -86,6 +100,18 @@ class IdempotencyFilter extends OncePerRequestFilter {
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+			throws ServletException, IOException {
+		try {
+			process(request, response, chain);
+		}
+		catch (DataAccessException ex) {
+			log.warn("Idempotency Redis operation failed ({})", ex.getClass().getSimpleName());
+			response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+			problems.write(request, response, HttpStatus.SERVICE_UNAVAILABLE, "idempotency.unavailable");
+		}
+	}
+
+	private void process(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
 		String key = request.getHeader(HEADER).strip();
 		if (key.isEmpty() || key.length() > 255) {
@@ -118,9 +144,10 @@ class IdempotencyFilter extends OncePerRequestFilter {
 		String redisKey = "idempotency:" + sha256Hex(
 				(caller + "\n" + request.getMethod() + "\n" + request.getRequestURI() + "\n" + key)
 					.getBytes(StandardCharsets.UTF_8));
-		Entry lock = new Entry("IN_PROGRESS", fingerprint, 0, null, null, null);
-		if (!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(redisKey, seal(redisKey, lock), props.lockTtl()))) {
-			respondToRetry(request, response, redisKey, fingerprint);
+		Entry lock = new Entry("IN_PROGRESS", fingerprint, 0, null, null, null, null);
+		String sealedLock = seal(redisKey, lock);
+		if (!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(redisKey, sealedLock, props.lockTtl()))
+				&& !respondToRetry(request, response, redisKey, fingerprint, sealedLock)) {
 			return;
 		}
 
@@ -140,25 +167,36 @@ class IdempotencyFilter extends OncePerRequestFilter {
 		else {
 			Entry done = new Entry("DONE", fingerprint, status, wrapped.getContentType(),
 					wrapped.getHeader(HttpHeaders.LOCATION),
-					Base64.getEncoder().encodeToString(wrapped.getContentAsByteArray()));
+					Base64.getEncoder().encodeToString(wrapped.getContentAsByteArray()),
+					wrapped.getHeader(HttpHeaders.CACHE_CONTROL));
 			redis.opsForValue().set(redisKey, seal(redisKey, done),
 					caller.equals("anonymous") ? props.anonymousTtl() : props.ttl());
 		}
 		wrapped.copyBodyToResponse();
 	}
 
-	private void respondToRetry(HttpServletRequest request, HttpServletResponse response, String redisKey,
-			String fingerprint) throws IOException {
+	/** True only when an obsolete cached 405 was atomically replaced with our execution lock. */
+	private boolean respondToRetry(HttpServletRequest request, HttpServletResponse response, String redisKey,
+			String fingerprint, String sealedLock) throws IOException {
 		String sealed = redis.opsForValue().get(redisKey);
 		Entry entry = sealed == null ? null : unseal(redisKey, sealed);
 		if (entry == null || "IN_PROGRESS".equals(entry.state())) {
 			// Either still running, or it finished and expired in between: tell the client to retry.
 			problems.write(request, response, HttpStatus.CONFLICT, "idempotency.in-progress");
-			return;
+			return false;
 		}
 		if (!entry.fingerprint().equals(fingerprint)) {
 			problems.write(request, response, HttpStatus.UNPROCESSABLE_CONTENT, "idempotency.key-reused");
-			return;
+			return false;
+		}
+		if (entry.status() == HttpStatus.METHOD_NOT_ALLOWED.value()) {
+			Long reclaimed = redis.execute(RECLAIM_UNSUPPORTED, List.of(redisKey), sealed, sealedLock,
+					Long.toString(props.lockTtl().toMillis()));
+			if (Long.valueOf(1).equals(reclaimed)) {
+				return true;
+			}
+			problems.write(request, response, HttpStatus.CONFLICT, "idempotency.in-progress");
+			return false;
 		}
 		response.setStatus(entry.status());
 		if (entry.contentType() != null) {
@@ -168,7 +206,11 @@ class IdempotencyFilter extends OncePerRequestFilter {
 			response.setHeader(HttpHeaders.LOCATION, entry.location());
 		}
 		response.setHeader(REPLAYED_HEADER, "true");
+		if (entry.cacheControl() != null) {
+			response.setHeader(HttpHeaders.CACHE_CONTROL, entry.cacheControl());
+		}
 		response.getOutputStream().write(Base64.getDecoder().decode(entry.body()));
+		return false;
 	}
 
 	private static boolean isMultipart(HttpServletRequest request) {
