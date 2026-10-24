@@ -17,7 +17,7 @@ spring:
       max-file-size: 11MB
       max-request-size: 23MB
   messages:
-    basename: i18n/shared,i18n/identity,i18n/driver,i18n/corporate,i18n/place,i18n/pricing,i18n/booking
+    basename: i18n/shared,i18n/identity,i18n/driver,i18n/corporate,i18n/place,i18n/pricing,i18n/booking,i18n/dispatch
     fallback-to-system-locale: false
   jpa:
     open-in-view: false

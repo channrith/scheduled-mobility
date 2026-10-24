@@ -1,6 +1,41 @@
 {
   "components" : {
     "schemas" : {
+      "AcceptItem" : {
+        "properties" : {
+          "backupDriverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "tripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "tripVersion" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "driverId", "tripId", "tripVersion" ],
+        "type" : "object"
+      },
+      "AcceptSuggestionsRequest" : {
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AcceptItem"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [ "items" ],
+        "type" : "object"
+      },
       "AccountDetail" : {
         "properties" : {
           "account" : {
@@ -195,18 +230,41 @@
         "required" : [ "fullName", "phone", "role" ],
         "type" : "object"
       },
-      "AssignRequest" : {
+      "AppliedView" : {
         "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "tripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AssignTripRequest" : {
+        "properties" : {
+          "backupDriverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "driverId" : {
             "format" : "uuid",
             "type" : "string"
           },
-          "version" : {
+          "note" : {
+            "type" : "string"
+          },
+          "reasonCode" : {
+            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "type" : "string"
+          },
+          "tripVersion" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
-        "required" : [ "driverId", "version" ],
+        "required" : [ "driverId", "reasonCode", "tripVersion" ],
         "type" : "object"
       },
       "AssignVehicleRequest" : {
@@ -225,6 +283,54 @@
           }
         },
         "required" : [ "vehicleId" ],
+        "type" : "object"
+      },
+      "AssignmentHistoryView" : {
+        "properties" : {
+          "action" : {
+            "type" : "string"
+          },
+          "actorUserId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "previousDriverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reasonCode" : {
+            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AssignmentResultView" : {
+        "properties" : {
+          "trip" : {
+            "$ref" : "#/components/schemas/DispatchTripView"
+          },
+          "warnings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/WarningView"
+            },
+            "type" : "array"
+          }
+        },
         "type" : "object"
       },
       "AssignmentView" : {
@@ -349,6 +455,26 @@
         "required" : [ "amountMinor", "currency" ],
         "type" : "object"
       },
+      "ChoiceView" : {
+        "properties" : {
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "score" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "travelMinutes" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "CostCenterBrief" : {
         "properties" : {
           "code" : {
@@ -468,6 +594,187 @@
           }
         },
         "required" : [ "paymentMethod", "quoteId" ],
+        "type" : "object"
+      },
+      "DaySuggestionsView" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "suggestions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SuggestionView"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "DeclineRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DispatchAssignmentView" : {
+        "properties" : {
+          "assignedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "assignedBy" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "backupConfirmedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "backupDeadline" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "backupDriverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "primaryConfirmedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "primaryDeadline" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "primaryDriverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reasonCode" : {
+            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "type" : "string"
+          },
+          "riskEvaluatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "riskReason" : {
+            "type" : "string"
+          },
+          "riskTier" : {
+            "enum" : [ "GREEN", "AMBER", "RED" ],
+            "type" : "string"
+          },
+          "slackSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "DispatchPointView" : {
+        "properties" : {
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "DispatchTripDetailView" : {
+        "properties" : {
+          "history" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AssignmentHistoryView"
+            },
+            "type" : "array"
+          },
+          "trip" : {
+            "$ref" : "#/components/schemas/DispatchTripView"
+          },
+          "warnings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/WarningView"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "DispatchTripView" : {
+        "properties" : {
+          "assignment" : {
+            "$ref" : "#/components/schemas/DispatchAssignmentView"
+          },
+          "corporateId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "dropoff" : {
+            "$ref" : "#/components/schemas/DispatchPointView"
+          },
+          "dropoffAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "flightNo" : {
+            "type" : "string"
+          },
+          "pickup" : {
+            "$ref" : "#/components/schemas/DispatchPointView"
+          },
+          "pickupAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "rideId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "slaTrip" : {
+            "type" : "boolean"
+          },
+          "status" : {
+            "enum" : [ "SCHEDULED", "ASSIGNED", "DRIVER_EN_ROUTE", "DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED", "CANCELLED_BY_PASSENGER", "CANCELLED_BY_DRIVER", "CANCELLED_BY_OPS", "NO_SHOW", "DISPUTED" ],
+            "type" : "string"
+          },
+          "tripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "tripVersion" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "type" : {
+            "enum" : [ "SCHEDULED", "AIRPORT", "RECURRING", "ON_DEMAND" ],
+            "type" : "string"
+          },
+          "vehicleClass" : {
+            "enum" : [ "MOTO", "TUKTUK_REMORK", "TUKTUK_RICKSHAW", "CAR", "SUV", "VAN" ],
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "DocumentUpload" : {
@@ -648,6 +955,34 @@
         },
         "type" : "object"
       },
+      "DriverLaneView" : {
+        "properties" : {
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "shifts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShiftView"
+            },
+            "type" : "array"
+          },
+          "trips" : {
+            "items" : {
+              "$ref" : "#/components/schemas/LaneTripView"
+            },
+            "type" : "array"
+          },
+          "vehicleClass" : {
+            "enum" : [ "MOTO", "TUKTUK_REMORK", "TUKTUK_RICKSHAW", "CAR", "SUV", "VAN" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "DriverSummary" : {
         "properties" : {
           "createdAt" : {
@@ -681,6 +1016,66 @@
           },
           "vehicle" : {
             "$ref" : "#/components/schemas/VehicleBrief"
+          }
+        },
+        "type" : "object"
+      },
+      "ExceptionView" : {
+        "properties" : {
+          "assignedDispatcherId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "details" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "openedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "pickupAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "resolutionNote" : {
+            "type" : "string"
+          },
+          "resolvedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [ "CRITICAL", "HIGH", "MEDIUM", "LOW" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "OPEN", "ACKNOWLEDGED", "RESOLVED", "AUTO_RESOLVED" ],
+            "type" : "string"
+          },
+          "tripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "UNASSIGNED", "UNCONFIRMED", "BACKUP_UNCONFIRMED", "DRIVER_DECLINED", "AT_RISK", "NO_BACKUP" ],
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -760,6 +1155,17 @@
           "to" : {
             "format" : "time-local",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LaneTripView" : {
+        "properties" : {
+          "role" : {
+            "type" : "string"
+          },
+          "trip" : {
+            "$ref" : "#/components/schemas/DispatchTripView"
           }
         },
         "type" : "object"
@@ -1642,6 +2048,19 @@
         "required" : [ "fullName", "phone" ],
         "type" : "object"
       },
+      "ResolveExceptionRequest" : {
+        "properties" : {
+          "note" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "version" ],
+        "type" : "object"
+      },
       "RetireRequest" : {
         "properties" : {
           "city" : {
@@ -1982,6 +2401,27 @@
         },
         "type" : "object"
       },
+      "SetBackupRequest" : {
+        "properties" : {
+          "assignmentVersion" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "backupDriverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "reasonCode" : {
+            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "assignmentVersion", "reasonCode" ],
+        "type" : "object"
+      },
       "SettingRequest" : {
         "properties" : {
           "value" : {
@@ -2035,6 +2475,66 @@
         },
         "type" : "object"
       },
+      "ShiftRequest" : {
+        "properties" : {
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "endsAt", "startsAt" ],
+        "type" : "object"
+      },
+      "ShiftView" : {
+        "properties" : {
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SuggestionView" : {
+        "properties" : {
+          "backup" : {
+            "$ref" : "#/components/schemas/ChoiceView"
+          },
+          "primary" : {
+            "$ref" : "#/components/schemas/ChoiceView"
+          },
+          "tripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "unplannedReason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SuspendRequest" : {
         "properties" : {
           "noticeAt" : {
@@ -2063,6 +2563,50 @@
           "suspendedBy" : {
             "format" : "uuid",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SwitchToBackupRequest" : {
+        "properties" : {
+          "assignmentVersion" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "note" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "assignmentVersion" ],
+        "type" : "object"
+      },
+      "TakeExceptionRequest" : {
+        "properties" : {
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "version" ],
+        "type" : "object"
+      },
+      "TimelineView" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "lanes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DriverLaneView"
+            },
+            "type" : "array"
+          },
+          "unassigned" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DispatchTripView"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -2248,17 +2792,21 @@
         },
         "type" : "object"
       },
-      "UnassignRequest" : {
+      "UnassignTripRequest" : {
         "properties" : {
-          "reason" : {
+          "note" : {
             "type" : "string"
           },
-          "version" : {
+          "reasonCode" : {
+            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "type" : "string"
+          },
+          "tripVersion" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
-        "required" : [ "version" ],
+        "required" : [ "reasonCode", "tripVersion" ],
         "type" : "object"
       },
       "UpdateAccountRequest" : {
@@ -2708,6 +3256,25 @@
         },
         "type" : "object"
       },
+      "WarningView" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "otherTripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ZoneRequest" : {
         "properties" : {
           "active" : {
@@ -2894,7 +3461,7 @@
       },
       "post" : {
         "description" : "Money in minor units of `currency` (USD cents or KHR riel). Defaults: 30 payment days, credit limit 0, service fee 8.00 %. `taxId` (TIN) must be unique.\n\n**Roles:** ADMIN",
-        "operationId" : "create_5",
+        "operationId" : "create_6",
         "parameters" : [ {
           "description" : "Language of error messages and SMS: `km` (default) or `en`",
           "in" : "header",
@@ -5652,7 +6219,7 @@
       },
       "post" : {
         "description" : "At least one name; the pin must be in Cambodia (`place.outside-cambodia`).\n\n**Roles:** ADMIN, DISPATCHER",
-        "operationId" : "create_4",
+        "operationId" : "create_5",
         "parameters" : [ {
           "description" : "Language of error messages and SMS: `km` (default) or `en`",
           "in" : "header",
@@ -6202,7 +6769,7 @@
       },
       "post" : {
         "description" : "Adds a version to the line (city + vehicle class, optionally `corporateId`). It is in force from `validFrom` (default now; not in the past) until `validTo` or the next version. Existing versions are never changed. Money in minor units of `currency`; `fuelIndexFactor` 0–2, `maxSurge` 1–5.\n\n**Roles:** ADMIN",
-        "operationId" : "create_3",
+        "operationId" : "create_4",
         "parameters" : [ {
           "description" : "Language of error messages and SMS: `km` (default) or `en`",
           "in" : "header",
@@ -6882,7 +7449,7 @@
       },
       "post" : {
         "description" : "`polygon`: 3–500 points inside Cambodia, lines must not cross (`pricing.zone-invalid`). AIRPORT needs `surchargeMinor` + `surchargeCurrency`; other types ignore them.\n\n**Roles:** ADMIN",
-        "operationId" : "create_2",
+        "operationId" : "create_3",
         "parameters" : [ {
           "description" : "Language of error messages and SMS: `km` (default) or `en`",
           "in" : "header",
@@ -8705,6 +9272,1167 @@
         "x-required-roles" : [ "@authz.canManageCorporate(#corporateId)" ]
       }
     },
+    "/api/v1/dispatch/exceptions" : {
+      "get" : {
+        "description" : "Severity first (CRITICAL, HIGH, MEDIUM, LOW), then the soonest pickup. Default: OPEN and ACKNOWLEDGED.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "queue",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "OPEN", "ACKNOWLEDGED", "RESOLVED", "AUTO_RESOLVED" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ExceptionView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Exception queue",
+        "tags" : [ "Dispatch · Exceptions" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/exceptions/{exceptionId}/resolve" : {
+      "post" : {
+        "description" : "`note` (≥ 5 characters): what was done.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "resolve_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "exceptionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResolveExceptionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExceptionView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Resolve",
+        "tags" : [ "Dispatch · Exceptions" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/exceptions/{exceptionId}/take" : {
+      "post" : {
+        "description" : "**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "take",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "exceptionId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TakeExceptionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExceptionView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Take it (assign to me → ACKNOWLEDGED)",
+        "tags" : [ "Dispatch · Exceptions" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/shifts" : {
+      "get" : {
+        "description" : "`date` in Phnom Penh time (YYYY-MM-DD).\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "shifts",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "date",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ShiftView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Shift blocks of a day",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/suggestions" : {
+      "get" : {
+        "description" : "A primary and a backup for every trip still without a driver, by simple rules: vehicle class, a shift covering the trip, time to get there from the previous drop-off (or home zone), spread fairly.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "suggestions",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "date",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DaySuggestionsView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Suggested drivers for a day",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/suggestions/accept" : {
+      "post" : {
+        "description" : "Assigns each item (reason SUGGESTION_ACCEPTED) on its own: one conflict does not undo the others.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "accept",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcceptSuggestionsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AppliedView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Accept suggestions",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/timeline" : {
+      "get" : {
+        "description" : "Each driver with shift blocks or trips that day: their blocks and trips (as primary or backup, with status, risk tier and confirmations), plus the open trips without a driver.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "timeline",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "date",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TimelineView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Day timeline by driver",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/trips/{tripId}" : {
+      "get" : {
+        "description" : "With warnings and the assignment history.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "trip",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispatchTripDetailView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "A trip as dispatch sees it",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/trips/{tripId}/assign" : {
+      "post" : {
+        "description" : "Needs a `reasonCode` (OTHER also a `note`) and the trip version you saw. Airport and corporate rides need a `backupDriverId`. Returns warnings (no shift, overlapping trip) that do not block.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "assign",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AssignTripRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssignmentResultView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Assign or reassign the driver (and backup)",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/trips/{tripId}/backup" : {
+      "put" : {
+        "description" : "Needs the assignment version you saw.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "backup",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetBackupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssignmentResultView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Set, change or clear the backup",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/trips/{tripId}/switch-to-backup" : {
+      "post" : {
+        "description" : "The backup becomes the driver; needs the assignment version you saw, so two clicks from the same view give one success and one 409.\n\n**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "switchToBackup",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SwitchToBackupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssignmentResultView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Switch to the backup (one click)",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
+    "/api/v1/dispatch/trips/{tripId}/unassign" : {
+      "post" : {
+        "description" : "**Roles:** ADMIN, DISPATCHER",
+        "operationId" : "unassign",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UnassignTripRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssignmentResultView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Take the driver off (→ SCHEDULED)",
+        "tags" : [ "Dispatch" ],
+        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
+      }
+    },
     "/api/v1/document-previews/{token}" : {
       "get" : {
         "description" : "Links come from `POST /api/v1/admin/drivers/{id}/documents/{docId}/files/{side}/preview-url` and expire after a few minutes. Invalid or expired links return 404.",
@@ -8776,6 +10504,275 @@
         } ],
         "summary" : "Open a document preview link",
         "tags" : [ "Document previews" ]
+      }
+    },
+    "/api/v1/driver/shifts" : {
+      "get" : {
+        "description" : "From 12 hours ago on.\n\n**Roles:** DRIVER",
+        "operationId" : "mine",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ShiftView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "My shift blocks",
+        "tags" : [ "Driver · Dispatch" ],
+        "x-required-roles" : [ "DRIVER" ]
+      },
+      "post" : {
+        "description" : "At most 14 hours, starting within 30 days; blocks may not overlap (`dispatch.shift-overlap`).\n\n**Roles:** DRIVER",
+        "operationId" : "create_2",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ShiftRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShiftView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Declare a shift block",
+        "tags" : [ "Driver · Dispatch" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/driver/shifts/{shiftId}" : {
+      "delete" : {
+        "description" : "Not while I have a trip inside it (`dispatch.shift-has-trips`).\n\n**Roles:** DRIVER",
+        "operationId" : "cancel_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "shiftId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShiftView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Cancel a shift block",
+        "tags" : [ "Driver · Dispatch" ],
+        "x-required-roles" : [ "DRIVER" ]
       }
     },
     "/api/v1/driver/trips" : {
@@ -9175,6 +11172,238 @@
         } ],
         "summary" : "Dropped off (→ COMPLETED)",
         "tags" : [ "Driver · Trips" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/driver/trips/{tripId}/confirm" : {
+      "post" : {
+        "description" : "As its driver or its backup.\n\n**Roles:** DRIVER",
+        "operationId" : "confirm",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispatchAssignmentView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Confirm an assigned trip",
+        "tags" : [ "Driver · Dispatch" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/driver/trips/{tripId}/decline" : {
+      "post" : {
+        "description" : "Takes me off it and puts it in the dispatchers' queue.\n\n**Roles:** DRIVER",
+        "operationId" : "decline",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeclineRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispatchAssignmentView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Decline an assigned trip",
+        "tags" : [ "Driver · Dispatch" ],
         "x-required-roles" : [ "DRIVER" ]
       }
     },
@@ -10374,127 +12603,6 @@
         "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
       }
     },
-    "/api/v1/ops/trips/{tripId}/assign" : {
-      "post" : {
-        "description" : "The driver must be APPROVED with a current vehicle of the ride's class (`booking.driver-unavailable`, `reason`). Two dispatchers assigning the same trip: the second gets 409.\n\n**Roles:** ADMIN, DISPATCHER",
-        "operationId" : "assign",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "tripId",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        }, {
-          "description" : "Language of error messages and SMS: `km` (default) or `en`",
-          "in" : "header",
-          "name" : "Accept-Language",
-          "required" : false,
-          "schema" : {
-            "enum" : [ "km", "en" ],
-            "type" : "string"
-          }
-        }, {
-          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
-          "in" : "header",
-          "name" : "Idempotency-Key",
-          "required" : false,
-          "schema" : {
-            "maxLength" : 255,
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/AssignRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/TripView"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Invalid request (`code` explains why)"
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Missing, invalid or expired access token"
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Authenticated, but not allowed (role or scope)"
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Not found"
-          },
-          "409" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
-          },
-          "422" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
-          }
-        },
-        "security" : [ {
-          "bearer-jwt" : [ ]
-        } ],
-        "summary" : "Assign a driver (SCHEDULED → ASSIGNED)",
-        "tags" : [ "Ops · Trips" ],
-        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
-      }
-    },
     "/api/v1/ops/trips/{tripId}/cancel" : {
       "post" : {
         "description" : "`reason` (≥ 10 characters).\n\n**Roles:** ADMIN, DISPATCHER",
@@ -10854,127 +12962,6 @@
           "bearer-jwt" : [ ]
         } ],
         "summary" : "Resolve a dispute (DISPUTED → COMPLETED)",
-        "tags" : [ "Ops · Trips" ],
-        "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
-      }
-    },
-    "/api/v1/ops/trips/{tripId}/unassign" : {
-      "post" : {
-        "description" : "`reason` (≥ 10 characters).\n\n**Roles:** ADMIN, DISPATCHER",
-        "operationId" : "unassign",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "tripId",
-          "required" : true,
-          "schema" : {
-            "format" : "uuid",
-            "type" : "string"
-          }
-        }, {
-          "description" : "Language of error messages and SMS: `km` (default) or `en`",
-          "in" : "header",
-          "name" : "Accept-Language",
-          "required" : false,
-          "schema" : {
-            "enum" : [ "km", "en" ],
-            "type" : "string"
-          }
-        }, {
-          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
-          "in" : "header",
-          "name" : "Idempotency-Key",
-          "required" : false,
-          "schema" : {
-            "maxLength" : 255,
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/UnassignRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/TripView"
-                }
-              }
-            },
-            "description" : "OK"
-          },
-          "400" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Invalid request (`code` explains why)"
-          },
-          "401" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Missing, invalid or expired access token"
-          },
-          "403" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Authenticated, but not allowed (role or scope)"
-          },
-          "404" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Not found"
-          },
-          "409" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
-          },
-          "422" : {
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
-          }
-        },
-        "security" : [ {
-          "bearer-jwt" : [ ]
-        } ],
-        "summary" : "Take the driver off (→ SCHEDULED)",
         "tags" : [ "Ops · Trips" ],
         "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
       }
@@ -11546,6 +13533,12 @@
     "url" : "/"
   } ],
   "tags" : [ {
+    "description" : "Dispatcher console: day timeline, suggestions, assigning drivers and backups",
+    "name" : "Dispatch"
+  }, {
+    "description" : "The exception queue: unassigned, unconfirmed, declined, at-risk trips",
+    "name" : "Dispatch · Exceptions"
+  }, {
     "description" : "Service area, airport surcharge and restricted areas",
     "name" : "Admin · Pricing zones"
   }, {
@@ -11564,14 +13557,14 @@
     "description" : "A corporate client's members, cost centres and booking policies",
     "name" : "Company"
   }, {
+    "description" : "Dispatchers: trips, cancellations and disputes (all audit-logged); assigning drivers is in Dispatch",
+    "name" : "Ops · Trips"
+  }, {
     "description" : "Fare rules (versioned), fuel index and exchange rate",
     "name" : "Admin · Pricing"
   }, {
     "description" : "Signed, short-lived links to document files",
     "name" : "Document previews"
-  }, {
-    "description" : "Dispatchers: assigning drivers and handling exceptions (all audit-logged)",
-    "name" : "Ops · Trips"
   }, {
     "description" : "The signed-in user",
     "name" : "Me"
@@ -11587,6 +13580,9 @@
   }, {
     "description" : "Driver onboarding, review and suspension. Personal data is always masked.",
     "name" : "Admin · Drivers"
+  }, {
+    "description" : "A driver's shift blocks and confirming assigned trips",
+    "name" : "Driver · Dispatch"
   }, {
     "description" : "Landmark search and the landmark database",
     "name" : "Places"
