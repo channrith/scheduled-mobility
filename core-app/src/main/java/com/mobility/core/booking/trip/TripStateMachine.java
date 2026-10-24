@@ -23,7 +23,8 @@ import org.springframework.http.HttpStatus;
 
 /**
  * Which status may follow which. Who may make a change (driver, rider, ops) is checked by the service; this is
- * only the order of things. A driver dropping a trip sends it back to SCHEDULED so ops can reassign it.
+ * only the order of things. A driver dropping a trip sends it back to SCHEDULED so ops can reassign it; a
+ * reassignment (another driver, e.g. the backup) is ASSIGNED again, from ASSIGNED or DRIVER_EN_ROUTE.
  */
 public final class TripStateMachine {
 
@@ -31,8 +32,8 @@ public final class TripStateMachine {
 
 	static {
 		NEXT.put(SCHEDULED, EnumSet.of(ASSIGNED, CANCELLED_BY_PASSENGER, CANCELLED_BY_OPS));
-		NEXT.put(ASSIGNED, EnumSet.of(DRIVER_EN_ROUTE, SCHEDULED, CANCELLED_BY_PASSENGER, CANCELLED_BY_OPS, CANCELLED_BY_DRIVER));
-		NEXT.put(DRIVER_EN_ROUTE, EnumSet.of(DRIVER_ARRIVED, SCHEDULED, CANCELLED_BY_PASSENGER, CANCELLED_BY_OPS, CANCELLED_BY_DRIVER));
+		NEXT.put(ASSIGNED, EnumSet.of(DRIVER_EN_ROUTE, ASSIGNED, SCHEDULED, CANCELLED_BY_PASSENGER, CANCELLED_BY_OPS, CANCELLED_BY_DRIVER));
+		NEXT.put(DRIVER_EN_ROUTE, EnumSet.of(DRIVER_ARRIVED, ASSIGNED, SCHEDULED, CANCELLED_BY_PASSENGER, CANCELLED_BY_OPS, CANCELLED_BY_DRIVER));
 		NEXT.put(DRIVER_ARRIVED, EnumSet.of(IN_PROGRESS, NO_SHOW, CANCELLED_BY_OPS));
 		NEXT.put(IN_PROGRESS, EnumSet.of(COMPLETED, CANCELLED_BY_OPS));
 		NEXT.put(COMPLETED, EnumSet.of(DISPUTED));

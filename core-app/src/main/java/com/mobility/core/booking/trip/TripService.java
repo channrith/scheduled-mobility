@@ -90,13 +90,17 @@ public class TripService {
 	// --- Ops ---------------------------------------------------------------------------------------
 
 	/**
-	 * Assigns an APPROVED driver whose current vehicle is of the trip's class. {@code expectedVersion} is the
-	 * version the dispatcher saw: a trip changed (or assigned) since then is a 409.
+	 * Assigns (or reassigns) an APPROVED driver whose current vehicle is of the trip's class. {@code expectedVersion}
+	 * is the version the caller saw: a trip changed since then is a 409. Called by dispatch, which checks the reason
+	 * code and writes the audit entry; {@code reason} goes into the trip_events row.
 	 */
 	@Transactional
-	public Trip assign(UUID tripId, UUID driverId, long expectedVersion, Actor ops) {
+	public Trip assign(UUID tripId, UUID driverId, long expectedVersion, Actor actor, String reason) {
 		Trip trip = require(tripId);
 		checkVersion(trip, expectedVersion);
+		if (driverId.equals(trip.getDriverId())) {
+			throw new ApiException(HttpStatus.CONFLICT, "booking.already-assigned");
+		}
 		Ride ride = ride(trip);
 		DriverInfo driver = drivers.get(driverId)
 			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "booking.driver-not-found"));
@@ -109,21 +113,18 @@ public class TripService {
 		}
 		TripStatus from = trip.getStatus();
 		trip.assign(driver.driverId(), driver.vehicle().vehicleId(), now());
-		Trip saved = record(trip, from, ops, null);
+		Trip saved = record(trip, from, actor, shortReason(reason));
 		outbox.publish("booking.trip-assigned", "trip", saved.getId(),
 				new TripAssigned(saved.getId(), saved.getRideId(), driver.driverId(), driver.vehicle().vehicleId(), saved.getPickupAt()));
-		audit("booking.trip.assigned", saved, Map.of("driverId", driver.driverId().toString()));
 		return saved;
 	}
 
-	/** Back to SCHEDULED without a driver, for someone else to take it. */
+	/** Back to SCHEDULED without a driver, for someone else to take it (dispatch checks the reason code and audits). */
 	@Transactional
-	public Trip unassign(UUID tripId, long expectedVersion, String reason, Actor ops) {
+	public Trip unassign(UUID tripId, long expectedVersion, String reason, Actor actor) {
 		Trip trip = require(tripId);
 		checkVersion(trip, expectedVersion);
-		Trip saved = change(trip, TripStatus.SCHEDULED, ops, reason(reason));
-		audit("booking.trip.unassigned", saved, Map.of());
-		return saved;
+		return change(trip, TripStatus.SCHEDULED, actor, shortReason(reason));
 	}
 
 	/** {@code byDriver}: the driver could not do it and nobody can replace them (CANCELLED_BY_DRIVER). */
@@ -283,6 +284,11 @@ public class TripService {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "booking.reason-required", MIN_REASON);
 		}
 		return r.length() > 500 ? r.substring(0, 500) : r;
+	}
+
+	private static String shortReason(String reason) {
+		String r = blankToNull(reason);
+		return r == null || r.length() <= 500 ? r : r.substring(0, 500);
 	}
 
 	private static String blankToNull(String s) {

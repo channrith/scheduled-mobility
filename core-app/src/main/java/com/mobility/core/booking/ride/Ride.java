@@ -113,6 +113,10 @@ public class Ride {
 	@Column(name = "service_fee_minor")
 	private Long serviceFeeMinor;
 
+	/** The quote's driving time; null for bookings made before it was kept. */
+	@Column(name = "duration_seconds")
+	private Long durationSeconds;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -128,7 +132,7 @@ public class Ride {
 			double pickupLng, String pickupNotes, String pickupVoiceNoteKey, UUID dropoffPlaceId, double dropoffLat,
 			double dropoffLng, String flightNo, Set<DayOfWeek> recurrenceDays, LocalDate recurrenceUntil,
 			PaymentMethod paymentMethod, String currency, long fareMinor, String equivalentCurrency, long equivalentMinor,
-			Long serviceFeeMinor, Instant createdAt) {
+			Long serviceFeeMinor, Long durationSeconds, Instant createdAt) {
 	}
 
 	Ride(Details d) {
@@ -160,6 +164,7 @@ public class Ride {
 		this.equivalentCurrency = d.equivalentCurrency();
 		this.equivalentMinor = d.equivalentMinor();
 		this.serviceFeeMinor = d.serviceFeeMinor();
+		this.durationSeconds = d.durationSeconds();
 		this.createdAt = d.createdAt();
 	}
 
@@ -279,6 +284,10 @@ public class Ride {
 
 	public Long getServiceFeeMinor() {
 		return serviceFeeMinor;
+	}
+
+	public Long getDurationSeconds() {
+		return durationSeconds;
 	}
 
 	public Instant getCreatedAt() {

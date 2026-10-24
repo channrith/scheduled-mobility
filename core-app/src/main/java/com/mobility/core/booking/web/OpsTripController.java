@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/ops/trips")
 @PreAuthorize("hasAnyRole('ADMIN', 'DISPATCHER')")
-@Tag(name = "Ops · Trips", description = "Dispatchers: assigning drivers and handling exceptions (all audit-logged)")
+@Tag(name = "Ops · Trips", description = "Dispatchers: trips, cancellations and disputes (all audit-logged); assigning drivers is in Dispatch")
 class OpsTripController {
 
 	private final TripService trips;
@@ -55,13 +55,6 @@ class OpsTripController {
 		this.bookings = bookings;
 		this.currentUser = currentUser;
 		this.clock = clock;
-	}
-
-	/** @param version the trip version you saw: a trip changed since then is a 409 */
-	record AssignRequest(@NotNull UUID driverId, @NotNull Long version) {
-	}
-
-	record UnassignRequest(@NotNull Long version, String reason) {
 	}
 
 	/** @param byDriver the driver could not do it and nobody can replace them (CANCELLED_BY_DRIVER) */
@@ -89,20 +82,6 @@ class OpsTripController {
 	TripView get(@PathVariable UUID tripId) {
 		Trip trip = trips.require(tripId);
 		return BookingViews.trip(trip, trips.history(List.of(tripId)).getOrDefault(tripId, List.of()));
-	}
-
-	@Operation(summary = "Assign a driver (SCHEDULED → ASSIGNED)",
-			description = "The driver must be APPROVED with a current vehicle of the ride's class "
-					+ "(`booking.driver-unavailable`, `reason`). Two dispatchers assigning the same trip: the second gets 409.")
-	@PostMapping("/{tripId}/assign")
-	TripView assign(@PathVariable UUID tripId, @Valid @RequestBody AssignRequest request) {
-		return BookingViews.trip(trips.assign(tripId, request.driverId(), request.version(), ops()), null);
-	}
-
-	@Operation(summary = "Take the driver off (→ SCHEDULED)", description = "`reason` (≥ 10 characters).")
-	@PostMapping("/{tripId}/unassign")
-	TripView unassign(@PathVariable UUID tripId, @Valid @RequestBody UnassignRequest request) {
-		return BookingViews.trip(trips.unassign(tripId, request.version(), request.reason(), ops()), null);
 	}
 
 	@Operation(summary = "Cancel (→ CANCELLED_BY_OPS or CANCELLED_BY_DRIVER)", description = "`reason` (≥ 10 characters).")

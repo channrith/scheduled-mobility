@@ -179,7 +179,7 @@ public class BookingService {
 				notes, voiceKey, quote.dropoffPlaceId(), quote.dropoffLat(), quote.dropoffLng(), flightNo,
 				type == BookingType.RECURRING ? r.recurrence().days() : null,
 				type == BookingType.RECURRING ? r.recurrence().until() : null, payment, quote.currency(), quote.totalMinor(),
-				quote.equivalentCurrency(), quote.equivalentMinor(), quote.serviceFeeMinor(), now));
+				quote.equivalentCurrency(), quote.equivalentMinor(), quote.serviceFeeMinor(), quote.durationSeconds(), now));
 		try {
 			rides.saveAndFlush(ride);
 		}

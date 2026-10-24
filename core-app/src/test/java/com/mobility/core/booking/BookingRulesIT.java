@@ -198,8 +198,8 @@ class BookingRulesIT {
 		assertThat(api.json(api.get("/api/v1/driver/trips", otherDriver.token()))).isEmpty();
 
 		api.get("/api/v1/driver/trips", passenger.token()).expectStatus().isForbidden();
-		api.post("/api/v1/ops/trips/" + tripId + "/assign", passenger.token(), Map.of("driverId", driver.driverId().toString(),
-				"version", 1), null).expectStatus().isForbidden();
+		api.post("/api/v1/dispatch/trips/" + tripId + "/assign", passenger.token(), Map.of("driverId", driver.driverId().toString(),
+				"reasonCode", "PLANNED", "tripVersion", 1), null).expectStatus().isForbidden();
 		JsonNode ops = api.json(api.get("/api/v1/ops/trips?status=ASSIGNED", api.tokenFor(Role.DISPATCHER)));
 		assertThat(ops.get("content").valueStream().map(t -> t.get("trip").get("id").asString())).contains(tripId.toString());
 		JsonNode detail = api.json(api.get("/api/v1/ops/trips/" + tripId, api.tokenFor(Role.DISPATCHER)));
@@ -213,15 +213,15 @@ class BookingRulesIT {
 		String dispatcher = api.tokenFor(Role.DISPATCHER);
 		UUID tripId = firstTrip(api.bookOk(passenger.token(), cashRide(api.quote(passenger.token(), inTwoHours(), null, false))));
 
-		JsonNode assigned = api.json(api.assign(tripId, driver.driverId(), 0));
-		api.post("/api/v1/ops/trips/" + tripId + "/unassign", dispatcher, Map.of("version", assigned.get("version").asLong(),
-				"reason", "short"), null).expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("booking.reason-required");
-		JsonNode back = api.json(api.post("/api/v1/ops/trips/" + tripId + "/unassign", dispatcher,
-				Map.of("version", assigned.get("version").asLong(), "reason", "Driver's car broke down"), null));
+		JsonNode assigned = api.json(api.assign(tripId, driver.driverId(), 0)).get("trip");
+		api.post("/api/v1/dispatch/trips/" + tripId + "/unassign", dispatcher, Map.of("tripVersion", assigned.get("tripVersion").asLong(),
+				"reasonCode", "OTHER", "note", "no"), null).expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("dispatch.note-required");
+		JsonNode back = api.json(api.post("/api/v1/dispatch/trips/" + tripId + "/unassign", dispatcher,
+				Map.of("tripVersion", assigned.get("tripVersion").asLong(), "reasonCode", "VEHICLE_ISSUE"), null)).get("trip");
 		assertThat(back.get("status").asString()).isEqualTo("SCHEDULED");
 		assertThat(back.get("driverId").isNull()).isTrue();
 
-		JsonNode again = api.json(api.assign(tripId, driver.driverId(), back.get("version").asLong()));
+		JsonNode again = api.json(api.assign(tripId, driver.driverId(), back.get("tripVersion").asLong())).get("trip");
 		for (String step : List.of("en-route", "arrived", "start", "complete")) {
 			api.json(api.driver(driver.token(), tripId, step));
 		}

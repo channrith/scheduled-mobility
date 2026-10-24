@@ -94,9 +94,10 @@ public class BookingApi {
 		return UUID.fromString(ride.get("trips").get(0).get("id").asString());
 	}
 
-	public RestTestClient.ResponseSpec assign(UUID tripId, UUID driverId, long version) {
-		return post("/api/v1/ops/trips/" + tripId + "/assign", tokenFor(Role.DISPATCHER),
-				Map.of("driverId", driverId.toString(), "version", version), null);
+	/** Through dispatch (assigning moved there; reason PLANNED). The response's {@code trip} holds the new state. */
+	public RestTestClient.ResponseSpec assign(UUID tripId, UUID driverId, long tripVersion) {
+		return post("/api/v1/dispatch/trips/" + tripId + "/assign", tokenFor(Role.DISPATCHER),
+				Map.of("driverId", driverId.toString(), "reasonCode", "PLANNED", "tripVersion", tripVersion), null);
 	}
 
 	public RestTestClient.ResponseSpec driver(String driverToken, UUID tripId, String step) {

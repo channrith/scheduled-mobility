@@ -126,7 +126,7 @@ class BookingFlowIT {
 		assertThat(done.get("history").get(1).get("actorRole").asString()).isEqualTo("OPS");
 		assertThat(done.get("history").get(2).get("actorRole").asString()).isEqualTo("DRIVER");
 		assertThat(jdbc.queryForList("SELECT action FROM audit.audit_logs WHERE target_id = ?", String.class, tripId.toString()))
-			.containsExactly("booking.trip.assigned");
+			.containsExactly("dispatch.trip.assigned");
 
 		List<String> types = jdbc.queryForList("""
 				SELECT event_type FROM outbox.outbox_events WHERE aggregate_id IN (?, ?) ORDER BY seq""", String.class, rideId, tripId);

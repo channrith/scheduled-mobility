@@ -41,6 +41,18 @@ class DriverDirectoryService implements DriverDirectory {
 		return drivers.findByUserId(userId).map(this::summary);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public java.util.List<DriverInfo> getAll(java.util.Collection<UUID> driverIds) {
+		return drivers.findAllById(driverIds).stream().map(this::summary).toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public java.util.List<DriverInfo> approved() {
+		return drivers.findByStatus(com.mobility.core.driver.DriverStatus.APPROVED).stream().map(this::summary).toList();
+	}
+
 	private DriverInfo summary(Driver d) {
 		ActiveVehicle vehicle = assignments.findActiveForDrivers(java.util.List.of(d.getId()), clock.instant()).stream()
 			.findFirst()
@@ -48,6 +60,6 @@ class DriverDirectoryService implements DriverDirectory {
 			.filter(v -> v.getStatus() == VehicleStatus.ACTIVE)
 			.map(v -> new ActiveVehicle(v.getId(), v.getVehicleClass(), v.getPlateNumber()))
 			.orElse(null);
-		return new DriverInfo(d.getId(), d.getUserId(), d.getFullName(), d.getStatus(), vehicle);
+		return new DriverInfo(d.getId(), d.getUserId(), d.getFullName(), d.getStatus(), d.getHomeZone(), vehicle);
 	}
 }

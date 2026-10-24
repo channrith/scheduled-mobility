@@ -107,7 +107,10 @@ public class Trip {
 				assignedAt = null;
 				enRouteAt = null;
 			}
-			case ASSIGNED -> assignedAt = now;
+			case ASSIGNED -> {
+				assignedAt = now;
+				enRouteAt = null;
+			}
 			case DRIVER_EN_ROUTE -> enRouteAt = now;
 			case DRIVER_ARRIVED -> arrivedAt = now;
 			case IN_PROGRESS -> startedAt = now;
