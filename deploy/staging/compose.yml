@@ -98,6 +98,11 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      # Checks core-app's access tokens (driver pings); never signs any.
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
+      # Latest driver positions, read by core-app's dispatch.
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
       JAVA_TOOL_OPTIONS: ${LOCATION_SERVICE_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness"]
@@ -105,7 +110,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-    mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-192m}
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Security and the Redis client need a little more than the bare skeleton did.
+    mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-256m}
     logging: *logging
 
   # Admin web console (Next.js). Tokens stay in its httpOnly cookies; the browser only talks to the

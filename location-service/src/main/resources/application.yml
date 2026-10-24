@@ -4,9 +4,23 @@ spring:
   threads:
     virtual:
       enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
 server:
   port: ${SERVER_PORT:8081}
+
+location:
+  # core-app's JWT public key (PEM contents or a file path); tokens are checked, never issued here.
+  jwt:
+    public-key: ${JWT_PUBLIC_KEY:}
+    public-key-file: ${JWT_PUBLIC_KEY_FILE:}
+    issuer: mobility-core
+  # How long a driver's latest position is kept after their last ping.
+  position-ttl: 24h
 
 management:
   endpoints:
