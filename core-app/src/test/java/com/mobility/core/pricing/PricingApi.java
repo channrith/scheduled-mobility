@@ -59,10 +59,26 @@ public class PricingApi {
 				Map.of("latitude", lat + d, "longitude", lng + d), Map.of("latitude", lat + d, "longitude", lng - d));
 	}
 
-	/** A random spot in Cambodia far enough inside the borders for small test zones. */
-	public static double[] randomSpot() {
-		java.util.concurrent.ThreadLocalRandom r = java.util.concurrent.ThreadLocalRandom.current();
-		return new double[] { r.nextDouble(10.5, 14.0), r.nextDouble(103.0, 107.0) };
+	/** Spacing of the spot grid: test zones reach at most ~0.1° (11 km) from their spot, so cells never overlap. */
+	static final double SPOT_SPACING = 0.25;
+
+	static final int SPOT_COLUMNS = 16;
+
+	static final int SPOT_ROWS = 14;
+
+	private static final java.util.concurrent.atomic.AtomicInteger NEXT_SPOT = new java.util.concurrent.atomic.AtomicInteger();
+
+	/**
+	 * A spot in Cambodia, far enough inside the borders for small test zones, that no other test of this run gets.
+	 * All tests share one database, so random spots could put two tests' zones on top of each other (and a quote
+	 * would then find the other test's city).
+	 */
+	public static double[] nextSpot() {
+		int n = NEXT_SPOT.getAndIncrement();
+		if (n >= SPOT_COLUMNS * SPOT_ROWS) {
+			throw new IllegalStateException("Out of test spots; make the grid denser or larger");
+		}
+		return new double[] { 10.625 + (n / SPOT_COLUMNS) * SPOT_SPACING, 103.125 + (n % SPOT_COLUMNS) * SPOT_SPACING };
 	}
 
 	public JsonNode createZone(String city, String type, java.util.List<Map<String, Object>> polygon, Long surchargeMinor) {

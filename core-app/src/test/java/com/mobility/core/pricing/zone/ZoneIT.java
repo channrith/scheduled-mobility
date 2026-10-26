@@ -44,7 +44,7 @@ class ZoneIT {
 	void setUp() {
 		api = new PricingApi(client, issuer);
 		city = TestCities.next();
-		spot = PricingApi.randomSpot();
+		spot = PricingApi.nextSpot();
 	}
 
 	@Test

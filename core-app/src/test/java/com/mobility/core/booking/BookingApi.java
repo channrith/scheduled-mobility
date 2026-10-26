@@ -43,7 +43,7 @@ public class BookingApi {
 		this.issuer = issuer;
 		this.pricing = new PricingApi(client, issuer);
 		this.city = TestCities.next();
-		double[] spot = PricingApi.randomSpot();
+		double[] spot = PricingApi.nextSpot();
 		this.lat = spot[0];
 		this.lng = spot[1];
 		this.airportLat = lat + 0.045;

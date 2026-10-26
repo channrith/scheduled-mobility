@@ -58,7 +58,7 @@ class QuoteIT {
 	void setUp() {
 		api = new PricingApi(client, issuer);
 		city = TestCities.next();
-		double[] spot = PricingApi.randomSpot();
+		double[] spot = PricingApi.nextSpot();
 		lat = spot[0];
 		lng = spot[1];
 		airportLat = lat + 0.045;
