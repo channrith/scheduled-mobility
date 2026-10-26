@@ -20,6 +20,7 @@
 	<modules>
 		<module>core-app</module>
 		<module>location-service</module>
+		<module>api-gateway</module>
 	</modules>
 
 	<properties>
@@ -27,6 +28,8 @@
 		<spring-modulith.version>2.1.1</spring-modulith.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<awssdk.version>2.55.11</awssdk.version>
+		<!-- 2025.1 (Oakwood) supports Boot 4.1 from 2025.1.2 on; imported by api-gateway only, so other modules keep Boot's versions. -->
+		<spring-cloud.version>2025.1.4</spring-cloud.version>
 	</properties>
 
 	<dependencyManagement>

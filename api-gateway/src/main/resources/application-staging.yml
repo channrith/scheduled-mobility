@@ -1,0 +1,5 @@
+# Staging (deploy/staging): behind Caddy on a single droplet.
+logging:
+  structured:
+    format:
+      console: ecs

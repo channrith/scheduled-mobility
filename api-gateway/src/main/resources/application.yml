@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: api-gateway
+  messages:
+    basename: i18n/gateway
+    fallback-to-system-locale: false
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # X-Forwarded-* are only added for requests from these proxies (Caddy and the console on the private
+          # network, or a local client); others' forwarded headers are not trusted.
+          trusted-proxies: (127\.0\.0\.1|0:0:0:0:0:0:0:1|10\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|192\.168\..*)
+          httpclient:
+            connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:2000}
+            # Document uploads to core-app are the slowest requests.
+            response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:30s}
+          routes:
+            # Driver GPS pings and live locations (HTTP and WebSocket; upgrades are proxied automatically).
+            - id: location-service
+              uri: ${LOCATION_SERVICE_URL:http://localhost:8081}
+              order: 0
+              predicates:
+                - Path=/api/v1/locations,/api/v1/locations/**,/ws/**
+            - id: core-app
+              uri: ${CORE_APP_URL:http://localhost:8080}
+              order: 1
+              predicates:
+                - Path=/api/v1/**
+
+server:
+  port: ${SERVER_PORT:8090}
+
+# Only the gateway's own health and info; backends' actuators are never routed.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    # One line per predicate and filter type at startup is noise.
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: warn
+    # Spring Cloud Gateway's own @Valid on lists (HV000271); nothing to fix on our side.
+    org.hibernate.validator.internal.metadata.aggregated.CascadingMetaDataBuilder: error

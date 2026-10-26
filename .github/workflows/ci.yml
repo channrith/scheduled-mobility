@@ -85,6 +85,10 @@ jobs:
             context: .
             dockerfile: Dockerfile
             build-args: MODULE=location-service
+          - module: api-gateway
+            context: .
+            dockerfile: Dockerfile
+            build-args: MODULE=api-gateway
           - module: web-console
             context: web-console
             dockerfile: web-console/Dockerfile

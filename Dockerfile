@@ -2,6 +2,7 @@
 # One image per deployable:
 #   docker build --build-arg MODULE=core-app -t mobility/core-app .
 #   docker build --build-arg MODULE=location-service -t mobility/location-service .
+#   docker build --build-arg MODULE=api-gateway -t mobility/api-gateway .
 # Tests are not run here; CI runs ./mvnw verify before building images.
 
 ARG MODULE=core-app
