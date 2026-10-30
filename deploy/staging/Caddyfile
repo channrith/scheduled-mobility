@@ -1,4 +1,4 @@
-# HTTPS for the API, the location service and the admin console. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
+# HTTPS for the API (through the gateway), the location service and the admin console. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
 # automatically. Hostnames are set in .env; without a domain use sslip.io, e.g. api.203-0-113-7.sslip.io.
 {
 	email {$ACME_EMAIL}
@@ -28,9 +28,11 @@
 	request_body {
 		max_size 24MB
 	}
-	reverse_proxy core-app:8080
+	# One host for all apps: the gateway routes to core-app and location-service.
+	reverse_proxy api-gateway:8090
 }
 
+# Kept until the apps use API_HOST for pings too; then this block and LOCATION_HOST go.
 {$LOCATION_HOST} {
 	import common
 	header Referrer-Policy no-referrer

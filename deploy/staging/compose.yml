@@ -34,6 +34,8 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
+      api-gateway:
+        condition: service_healthy
       core-app:
         condition: service_healthy
     mem_limit: ${CADDY_MEM_LIMIT:-128m}
@@ -117,14 +119,34 @@ services:
     mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-256m}
     logging: *logging
 
+  # The single API host: Caddy sends API_HOST here, and the console calls it on the internal network. Routes to
+  # core-app and location-service; request IDs and edge errors only, no business logic.
+  api-gateway:
+    image: ${IMAGE_REPOSITORY}/api-gateway:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      CORE_APP_URL: http://core-app:8080
+      LOCATION_SERVICE_URL: http://location-service:8081
+      JAVA_TOOL_OPTIONS: ${API_GATEWAY_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8090/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Measured ~185 MiB in use under load; 192m is too tight.
+    mem_limit: ${API_GATEWAY_MEM_LIMIT:-256m}
+    logging: *logging
+
   # Admin web console (Next.js). Tokens stay in its httpOnly cookies; the browser only talks to the
-  # console, which calls core-app on the internal network. Secure cookies need HTTPS, which Caddy provides.
+  # console, which calls the API gateway on the internal network. Secure cookies need HTTPS, which Caddy provides.
   web-console:
     image: ${IMAGE_REPOSITORY}/web-console:${IMAGE_TAG}
     restart: unless-stopped
     environment:
       TZ: UTC
-      CORE_API_URL: http://core-app:8080
+      CORE_API_URL: http://api-gateway:8090
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/login"]
       interval: 15s
@@ -132,7 +154,7 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-      core-app:
+      api-gateway:
         condition: service_healthy
     # Uploads pass through the console in memory (up to 24 MB per request): ~110 MB at rest, ~150 MB during one 14 MB upload.
     mem_limit: ${WEB_CONSOLE_MEM_LIMIT:-256m}

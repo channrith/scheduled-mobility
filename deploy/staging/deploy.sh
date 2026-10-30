@@ -2,7 +2,7 @@
 # Deploys one image tag (a git commit SHA built by CI) on the staging server:
 #   ./deploy.sh <image-tag>
 # 1. Dumps the database to backups/ (last 5 kept) while the current version is still running.
-# 2. Pulls the app images, restarts the stack and waits for core-app, location-service and web-console to
+# 2. Pulls the app images, restarts the stack and waits for core-app, location-service, api-gateway and web-console to
 #    report healthy.
 # 3. Applies changed single-file config mounts (Caddyfile, RabbitMQ conf) by recreating that service.
 # 4. Checks the API and the console end to end over HTTPS.
@@ -32,7 +32,7 @@ set_env() {
 	mv "$tmp" .env
 }
 
-apps=(core-app location-service web-console)
+apps=(core-app location-service api-gateway web-console)
 
 healthy() {
 	local service id status

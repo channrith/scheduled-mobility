@@ -83,6 +83,12 @@ class GatewayRoutingTests {
 	}
 
 	@Test
+	void apiDocsGoToCoreApp() {
+		client.get().uri("/v3/api-docs").exchange().expectBody().jsonPath("$.service").isEqualTo("core-app");
+		client.get().uri("/swagger-ui/index.html").exchange().expectBody().jsonPath("$.service").isEqualTo("core-app");
+	}
+
+	@Test
 	void keepsASaneClientRequestIdAndReplacesAnOddOne() {
 		client.get()
 			.uri("/api/v1/me")
@@ -121,13 +127,18 @@ class GatewayRoutingTests {
 	}
 
 	@Test
-	void forwardedHeadersAreSetForTheBackend() {
+	void caddysForwardedHeadersPassThroughUnchanged() {
 		client.get()
 			.uri("/api/v1/me")
+			.header("X-Forwarded-For", "203.0.113.7")
+			.header("X-Forwarded-Proto", "https")
+			.header("X-Forwarded-Host", "api.example.com")
 			.exchange()
 			.expectBody()
-			.jsonPath("$.headers.x-forwarded-for").exists()
-			.jsonPath("$.headers.x-forwarded-proto").isEqualTo("http");
+			.jsonPath("$.headers.x-forwarded-for").isEqualTo("203.0.113.7")
+			.jsonPath("$.headers.x-forwarded-proto").isEqualTo("https")
+			.jsonPath("$.headers.x-forwarded-host").isEqualTo("api.example.com")
+			.jsonPath("$.headers.forwarded").doesNotExist();
 	}
 
 	@Test

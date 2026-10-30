@@ -8,9 +8,20 @@ spring:
     gateway:
       server:
         webflux:
-          # X-Forwarded-* are only added for requests from these proxies (Caddy and the console on the private
-          # network, or a local client); others' forwarded headers are not trusted.
+          # Caddy sets X-Forwarded-For/-Proto/-Host (ignoring any a client sent). They pass through untouched for
+          # requests from these proxies (the private network: Caddy and the console; loopback locally), and are
+          # removed for anyone else. The gateway adds nothing: appending its hop would drop the client's public IP
+          # from X-Forwarded-For (only entries matching this pattern survive an append) and turn "https" into
+          # "https,http". Backends trust private addresses as proxies, so they still find the client.
           trusted-proxies: (127\.0\.0\.1|0:0:0:0:0:0:0:1|10\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|192\.168\..*)
+          x-forwarded:
+            for-enabled: false
+            proto-enabled: false
+            host-enabled: false
+            port-enabled: false
+            prefix-enabled: false
+          forwarded:
+            enabled: false
           httpclient:
             connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:2000}
             # Document uploads to core-app are the slowest requests.
@@ -27,6 +38,12 @@ spring:
               order: 1
               predicates:
                 - Path=/api/v1/**
+            # Swagger UI and the spec; core-app answers 404 unless API_DOCS_ENABLED=true.
+            - id: core-app-docs
+              uri: ${CORE_APP_URL:http://localhost:8080}
+              order: 2
+              predicates:
+                - Path=/v3/api-docs,/v3/api-docs/**,/swagger-ui.html,/swagger-ui/**
 
 server:
   port: ${SERVER_PORT:8090}
