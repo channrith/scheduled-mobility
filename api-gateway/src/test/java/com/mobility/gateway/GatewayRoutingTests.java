@@ -5,9 +5,12 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.http.MediaType;
@@ -20,9 +23,11 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
+@ExtendWith(OutputCaptureExtension.class)
 class GatewayRoutingTests {
 
 	static final StubBackend core = new StubBackend("core-app");
@@ -169,8 +174,13 @@ class GatewayRoutingTests {
 	}
 
 	@Test
-	void ownHealthIsUp() {
+	void ownHealthIsUpAndNotLoggedWhileHealthy(CapturedOutput output) {
 		client.get().uri("/actuator/health/readiness").exchange().expectStatus().isOk();
+		client.get().uri("/api/v1/me").header("X-Request-Id", "log-check-0001").exchange().expectStatus().isOk();
+
+		// The line is written just after the response completes.
+		await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> assertThat(output.getOut()).contains("GET /api/v1/me -> 200"));
+		assertThat(output.getOut()).doesNotContain("/actuator/health/readiness -> 200");
 	}
 
 	@Test

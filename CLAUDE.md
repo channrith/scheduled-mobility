@@ -11,7 +11,11 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 
 ## Architecture rules (do not violate without asking me)
 - **Modular monolith** in Spring Boot. Do NOT create microservices.
-  The only separate deployable is `location-service` (WebSocket + driver GPS pings).
+  Separate deployables: `location-service` (WebSocket + driver GPS pings) and `api-gateway`.
+- **`api-gateway`** (Spring Cloud Gateway, WebFlux) is the single public API host: routing, request IDs
+  (`X-Request-Id`, logged as `request.id` by every service), header hygiene and edge errors; later the JWT
+  pre-check, rate limits and partner clients. **No business logic and no database in the gateway**; permission
+  rules stay in the services (`@PreAuthorize`), which keep checking JWTs themselves.
 - Module boundaries enforced with **Spring Modulith**. Modules talk through public APIs
   or domain events only — never access another module's repositories or tables.
 - Modules: `identity`, `driver`, `corporate`, `place`, `pricing`, `booking`, `dispatch`,
@@ -25,6 +29,7 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - PostgreSQL 16 + PostGIS, Flyway migrations
 - Redis, RabbitMQ
 - Spring Security with JWT (short access token + rotating refresh token)
+- Spring Cloud Gateway (2025.1 Oakwood; `api-gateway` only, its BOM imported there so other modules keep Boot's versions)
 - Testcontainers for integration tests, JUnit 5, AssertJ
 - Next.js (TypeScript, App Router) for the dispatcher/admin/corporate web console
 - Docker Compose for local development
@@ -78,6 +83,7 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - Start infrastructure: `docker compose up -d`
 - Backend tests: `./mvnw verify`
 - Run backend: `./mvnw spring-boot:run -pl core-app`
+- Run gateway: `./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080, location-service :8081)
 - Web console: `cd web-console && npm run dev`
 
 ## How I want you to work
