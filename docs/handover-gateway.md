@@ -134,7 +134,8 @@ Plan first and wait for approval; small steps with tests after each; suggest com
 pushes and deploys); ask before new libraries. The user runs droplet and GitHub commands and pastes the output;
 Claude guides and checks it. Don't touch SMS/OTP code or settings. The repo is public: never write secrets or real
 staging values into it. Stop local servers started for testing when done (core-app 8080, location-service 8081,
-gateway 8090, console 3000), or say which are left running. Before `git add .`, check `git status` (both workflow
+gateway 8090, console 3000), or say which are left running: `scripts/dev.sh up|smoke|down` does the start,
+check and stop; `scripts/check.sh` runs the pre-commit checks. Before `git add .`, check `git status` (both workflow
 files were once deleted from the working tree by accident).
 
 ## 9. Follow-ups

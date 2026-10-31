@@ -58,6 +58,11 @@ openssl pkey -in jwt-private.pem -pubout -out jwt-public.pem
 
 ### Start
 
+**Shortcut:** `scripts/dev.sh up --console` does everything below in the background and waits until each process
+is healthy; `scripts/dev.sh smoke` checks the routes through the gateway, `scripts/dev.sh status` shows what runs,
+`scripts/dev.sh logs core-app` follows a log, and `scripts/dev.sh down` stops what it started (logs in
+`var/dev/`). By hand:
+
 ```bash
 # PostgreSQL + PostGIS, Redis, RabbitMQ; --wait returns once they are healthy (else core-app may start too early).
 # Name the services: a plain `docker compose up -d` also starts the Dockerised console on port 3000.
@@ -289,7 +294,16 @@ The web console can generate TypeScript types from it, e.g. `npx openapi-typescr
 
 ```bash
 ./mvnw verify
+scripts/check.sh            # before a commit: what CI runs plus the repo's pitfalls (--fast skips the *IT tests)
 ```
+
+`scripts/check.sh` stops at the first failure and says what to do. It checks, in order:
+- no tracked file deleted by accident;
+- `.dockerignore` lists every Maven module;
+- record names are unique for OpenAPI;
+- the console's API types match `docs/openapi.json`;
+- console lint, typecheck and build;
+- `./mvnw verify`.
 
 - **Unit tests** (`*Tests`, surefire) include `ModularityTests`. It verifies Spring Modulith boundaries
   and writes module diagrams to `core-app/target/spring-modulith-docs/`.

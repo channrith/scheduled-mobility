@@ -88,6 +88,8 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
   (shared keys); full local setup in README "Run locally".
 - Run gateway: `./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080, location-service :8081)
 - Web console: `cd web-console && npm run dev`
+- Whole local stack: `scripts/dev.sh up [--console]` · `smoke` · `status` · `logs <service>` · `down` (stops only what it started)
+- Before suggesting a commit: `scripts/check.sh` (`--fast` skips integration tests); it is what CI runs plus the repo's pitfalls
 
 ## Continuing in a new session
 - Read the latest handover first: `docs/handover-gateway.md` (project status, what was built, the next step and
