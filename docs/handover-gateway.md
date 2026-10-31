@@ -2,7 +2,7 @@
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
 Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Next: gateway phase 2, planned and waiting for the user's approval** (section 10). Read this file and `CLAUDE.md`;
+**Next: gateway phase 2, approved 2026-10-31** (section 10; decisions in section 2). Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
@@ -38,20 +38,24 @@ and plain routing; it could not do partner credentials or per-client limits.
 | Architecture rule | `api-gateway` is the second allowed deployable besides location-service (CLAUDE.md); no business logic, no database |
 | Spring Cloud | 2025.1.4 (Oakwood, Gateway 5.0.4): supports Boot 4.1 from 2025.1.2. 2026.0 (Paddington) was only RC on Boot 4.2 |
 | BOM scope | Imported in `api-gateway/pom.xml` only, so core-app and location-service keep Boot's dependency versions |
-| Services still check JWTs | Yes, defense in depth: the gateway's check (phase 2) is extra, not a replacement |
-| Partner credentials (phase 4) | OAuth2 client credentials → short JWT with role `PARTNER`; static API keys only for partners that cannot do OAuth |
+| Where credentials are checked (2026-10-31) | **The gateway** is the single place that checks external credentials (user JWT, partner API key). Not core-app: it is just one backend behind the gateway |
+| How services learn who calls: **variant B** (2026-10-31) | The gateway forwards a **signed** user context (a JWT). Services only verify its signature through the shared `platform-security` module (a dependency plus a JWKS URL); they implement no validation of their own. Rejected **variant A** (plain trusted `X-User-Id`/`X-Roles` headers): a request that skips the gateway could claim to be anyone; acceptable only once the `loc.` bypass host is gone, no service port is reachable except from the gateway, and every internal caller uses the gateway |
+| Public keys: JWKS (2026-10-31) | core-app serves `/.well-known/jwks.json` (internal network only, not routed by the gateway); services and the gateway are configured with `JWT_JWKS_URI`, none stores a key. Rotation = core-app publishes old and new key (tokens carry `kid`), no restarts. Only core-app holds the private key and signs tokens |
+| Gateway checks only token validity (2026-10-31) | Missing, expired, forged or wrong-issuer token → 401 at the gateway. **No role rules at the gateway**: they stay in the services' `@PreAuthorize` (one place). Edge role rules only for partner routes in phase 4 |
+| The gateway's 401 (2026-10-31) | Same as core-app's: problem+json, code `auth.unauthorized`, `WWW-Authenticate: Bearer`, km/en, so apps and the BFF (refreshes on any 401) see one format |
+| Partner credentials (phase 4; changed 2026-10-31) | **API keys** (the user's requirement), header `X-Api-Key`. The gateway exchanges a key through identity for a short-lived JWT (role `PARTNER`, partner id, scopes) and caches it until expiry; services never see API keys. Keys hashed in identity, shown once, revocable from the console, two active per partner for rotation, scopes and a rate limit each, HTTPS only |
 | Droplet | Stays 2 GB while in development (4 GB is ~$24/month vs ~$12; settings for it are in `.env.staging.example`) |
 | Order | Dispatch was deployed to staging first, then phase 1 |
 
 ## 3. Phases
 
 1. **Single API host** (this doc): routing, request IDs, header hygiene, edge errors, deploy wiring. Done.
-2. Shared `platform-security` module (the JWT resource-server setup now copied in core-app and location-service,
-   plus the two `RequestIdFilter`s) and the JWT check at the gateway with an explicit public-route list.
+2. Shared `platform-security` module with JWKS, and the JWT check at the gateway (section 10). In progress.
 3. Rate limits: Redis token buckets per route (auth by IP, quotes by user, partners by client plan, pings by
    driver); 429 problem+json with `Retry-After`. The OTP limits in identity stay (business rules).
-4. Partner clients when the first partner needs it: `identity.api_clients` (hashed secrets, scopes, plan),
-   `POST /api/v1/auth/token` (client credentials), admin endpoints + audit, console screens, `/partner/v1/**`.
+4. Partners when the first one needs it: API keys in `identity.api_keys` (hashed, scopes, plan), an internal
+   exchange endpoint in identity (key → short-lived `PARTNER` JWT) used by the gateway, admin endpoints + audit,
+   console screens, `/partner/v1/**`.
 
 ## 4. What was built (`api-gateway/`, package `com.mobility.gateway`)
 
@@ -148,9 +152,7 @@ files were once deleted from the working tree by accident).
   be tracked.
 - Consider 4 GB before load testing; the gateway and location-service each sit at ~75% of 256 MB.
 
-## 10. Next: gateway phase 2 (plan proposed 2026-10-31, **not yet approved**)
-
-Wait for the user's answers to the three decisions below before writing code.
+## 10. Gateway phase 2 (approved 2026-10-31; decisions in section 2)
 
 **Duplication today:**
 
@@ -161,29 +163,26 @@ Wait for the user's answers to the three decisions below before writing code.
 | `roles` claim → `ROLE_*` authorities | `SecurityConfiguration.jwtAuthenticationConverter` | hand-written copy |
 | Request IDs in logs | `shared/web/RequestIdFilter` | `RequestIdFilter` (copy) |
 
-**Step 1, `platform-security` library module (no behaviour change):** `MobilityJwt` (public-key loading, the
-validators, roles → authorities; servlet `JwtDecoder` for the services and `ReactiveJwtDecoder` for the gateway)
-and `RequestIds` (rules plus the servlet filter). core-app keeps its private key and signing in `identity` (only it
-issues tokens); each service keeps its own route rules. Add the module to `.dockerignore`. Proof: all existing
-core-app and location-service tests pass unchanged, plus unit tests for the module.
+**Step 1, `platform-security` library module + JWKS (no behaviour change on staging):**
+- The module: the validators (30 s skew, issuer), roles → authorities, decoders from a **JWKS URL** (preferred) or a
+  PEM key (fallback, for tests and until staging switches), servlet and reactive variants, and `RequestIds` (rules
+  plus the servlet filter).
+- core-app serves its public key(s) at `/.well-known/jwks.json` (permitted without a token; core-app keeps its
+  private key and signing in `identity`).
+- core-app and location-service use the module; their copies go. location-service accepts `JWT_JWKS_URI` **or** the
+  PEM settings (exactly one), so staging keeps working unchanged until step 3.
+- Add the module to `.dockerignore` (`scripts/check.sh` checks this). Proof: all existing tests pass unchanged.
 
-**Step 2, JWT check at the gateway** (Spring Security WebFlux): public without a token: `/api/v1/auth/**`,
-`GET /api/v1/document-previews/*`, `/actuator/health/**`, `/actuator/info`, Swagger paths. Everything else needs a
-valid token; missing, expired, wrong key or wrong issuer → 401 at the gateway, never reaching a backend, rendered
-like core-app's (problem+json, code `auth.unauthorized`, `WWW-Authenticate: Bearer`, km/en) so apps and the BFF
-(which refreshes on any 401) see one format. Valid tokens pass through unchanged; services check them again.
-Note: a bearer token that is present but invalid gets 401 even on a public route (same as core-app today).
+**Step 2, JWT check at the gateway** (Spring Security WebFlux, using the module, configured with `JWT_JWKS_URI`):
+public without a token: `/api/v1/auth/**`, `GET /api/v1/document-previews/*`, `/actuator/health/**`,
+`/actuator/info`, Swagger paths. Everything else needs a valid token, else 401 like core-app's. Valid tokens pass
+through unchanged. A bearer token that is present but invalid gets 401 even on a public route (as in core-app).
 
-**Step 3, deploy and docs:** `JWT_PUBLIC_KEY` for `api-gateway` in `deploy/staging/compose.yml` (the droplet `.env`
-already has it); measure memory with Spring Security, raise `API_GATEWAY_MEM_LIMIT` to 288m if it exceeds ~200 MiB;
-CLAUDE.md line for the shared module; a phase 2 section here.
+**Step 3, deploy and docs:** staging Compose: `JWT_JWKS_URI=http://core-app:8080/.well-known/jwks.json` for the
+gateway and location-service, `JWT_PUBLIC_KEY` removed from location-service; measure the gateway's memory (raise to
+288m if over ~200 MiB); locally the gateway then needs core-app running (README, CLAUDE.md, `scripts/dev.sh`);
+update this handover.
 
-**Commits:** `refactor(security): platform-security module for JWT checks and request IDs; core-app and
-location-service use it` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` ·
-`chore(deploy): gateway JWT key; docs`.
-
-**Decisions waiting for the user** (recommendations first):
-1. Gateway checks only that the token is valid; role rules stay in the services (no drift from `@PreAuthorize`).
-   Edge role rules come with partner routes in phase 4. Alternative: role rules at the edge too.
-2. The gateway's 401 uses core-app's code `auth.unauthorized`. Alternative: `gateway.unauthorized`.
-3. OK to add `platform-security` as a library module (not a deployable, so the deployables rule is unchanged).
+**Commits:** `refactor(security): platform-security module (JWKS, token checks, request IDs); core-app serves its
+JWKS` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` · `chore(deploy): JWKS URL
+for gateway and location-service; docs`.

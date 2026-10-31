@@ -1,7 +1,7 @@
 package com.mobility.core.identity.security;
 
-import com.mobility.core.identity.token.AccessTokenIssuer;
 import com.mobility.core.shared.web.Problems;
+import com.mobility.platform.security.MobilityJwt;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +15,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -40,6 +38,8 @@ class SecurityConfiguration {
 			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/v1/auth/**").permitAll()
+				// Public keys for the other services (internal network; the gateway does not route it).
+				.requestMatchers(HttpMethod.GET, MobilityJwt.JWKS_PATH).permitAll()
 				// Signed, short-lived document links: the token in the URL is the authorization.
 				.requestMatchers(HttpMethod.GET, "/api/v1/document-previews/*").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
@@ -48,7 +48,7 @@ class SecurityConfiguration {
 				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(rs -> rs
-				.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+				.jwt(jwt -> jwt.jwtAuthenticationConverter(MobilityJwt.authenticationConverter()))
 				.authenticationEntryPoint(entryPoint)
 				.accessDeniedHandler(accessDeniedHandler))
 			.exceptionHandling(ex -> ex.authenticationEntryPoint(entryPoint).accessDeniedHandler(accessDeniedHandler));
@@ -74,16 +74,6 @@ class SecurityConfiguration {
 			source.registerCorsConfiguration("/api/**", config);
 		}
 		return source;
-	}
-
-	/** Maps the {@code roles} claim to {@code ROLE_*} authorities; principal name is the user id. */
-	static JwtAuthenticationConverter jwtAuthenticationConverter() {
-		JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
-		authorities.setAuthoritiesClaimName(AccessTokenIssuer.ROLES_CLAIM);
-		authorities.setAuthorityPrefix("ROLE_");
-		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-		converter.setJwtGrantedAuthoritiesConverter(authorities);
-		return converter;
 	}
 
 	@Bean

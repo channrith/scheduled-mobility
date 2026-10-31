@@ -16,6 +16,10 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
   (`X-Request-Id`, logged as `request.id` by every service), header hygiene and edge errors; later the JWT
   pre-check, rate limits and partner clients. **No business logic and no database in the gateway**; permission
   rules stay in the services (`@PreAuthorize`), which keep checking JWTs themselves.
+- **`platform-security`** is a shared library (not a deployable): how every service verifies core-app's access
+  tokens (keys from core-app's JWKS `/.well-known/jwks.json` or a PEM key; issuer, 30 s skew, `roles` → `ROLE_*`)
+  and logs request IDs (auto-configured in servlet services). Use it in any new service; never copy that code.
+  Only core-app holds the private key and signs tokens.
 - Module boundaries enforced with **Spring Modulith**. Modules talk through public APIs
   or domain events only — never access another module's repositories or tables.
 - Modules: `identity`, `driver`, `corporate`, `place`, `pricing`, `booking`, `dispatch`,

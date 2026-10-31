@@ -18,6 +18,8 @@
 	<description>Scheduled &amp; contracted mobility platform for Phnom Penh</description>
 
 	<modules>
+		<!-- Library, not a deployable: token checks and request IDs shared by the services and the gateway. -->
+		<module>platform-security</module>
 		<module>core-app</module>
 		<module>location-service</module>
 		<module>api-gateway</module>

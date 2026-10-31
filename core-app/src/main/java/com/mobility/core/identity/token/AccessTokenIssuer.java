@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AccessTokenIssuer {
 
-	public static final String ROLES_CLAIM = "roles";
+	public static final String ROLES_CLAIM = com.mobility.platform.security.MobilityJwt.ROLES_CLAIM;
 
 	public static final String CORPORATE_CLAIM = "corp";
 

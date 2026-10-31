@@ -9,6 +9,7 @@ with scheduled rides and airport transfers. See [CLAUDE.md](CLAUDE.md) for archi
 |---------------------|-----------------------------------------------------------------------------------|
 | `core-app/`         | Spring Boot modular monolith (Spring Modulith). One package per module under `com.mobility.core`. |
 | `location-service/` | Separate deployable for driver GPS pings and WebSocket live location.             |
+| `platform-security/`| Shared library, not a deployable: how every service verifies core-app's tokens (JWKS or a PEM key, issuer, roles) and logs request IDs. |
 | `api-gateway/`      | Separate deployable: the single public API host (Spring Cloud Gateway). Routes to core-app and location-service; request IDs and edge errors, no business logic. |
 | `web-console/`      | Next.js operations console (driver onboarding today). See `web-console/README.md`. |
 | `docker-compose.yml`| Local PostgreSQL 16 + PostGIS, Redis, RabbitMQ.                                   |
@@ -104,8 +105,8 @@ Stop each process with Ctrl+C. Stop infrastructure with `docker compose down`; a
 volumes.
 
 **If something does not start:**
-- location-service: *"Set exactly one of JWT_PUBLIC_KEY (PEM) or JWT_PUBLIC_KEY_FILE"*: `.env` was not exported in
-  that terminal, or `JWT_PUBLIC_KEY_FILE` is not set (step 3).
+- location-service: *"Set exactly one of JWT_JWKS_URI ..., JWT_PUBLIC_KEY (PEM) or JWT_PUBLIC_KEY_FILE"*: `.env` was
+  not exported in that terminal, or `JWT_PUBLIC_KEY_FILE` is not set (step 3).
 - core-app: *"Unable to obtain connection from database"*: Postgres was not ready yet; use `--wait` as above.
 - *"Port 8080 was already in use"*: a previous run is still going: `lsof -nP -iTCP:8080 -sTCP:LISTEN`.
 - `npm run dev` says port 3000 is in use and picks 3001: the Dockerised console is running; `docker compose stop web-console`.

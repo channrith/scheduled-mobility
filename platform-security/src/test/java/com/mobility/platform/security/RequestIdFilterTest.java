@@ -1,4 +1,4 @@
-package com.mobility.core.shared.web;
+package com.mobility.platform.security;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -15,17 +15,17 @@ class RequestIdFilterTest {
 
 	String idSeenDuring(MockHttpServletRequest request) throws Exception {
 		AtomicReference<String> seen = new AtomicReference<>();
-		filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> seen.set(MDC.get(RequestIdFilter.MDC_KEY)));
+		filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> seen.set(MDC.get(RequestIds.LOG_KEY)));
 		return seen.get();
 	}
 
 	@Test
 	void logsTheGatewaysRequestId() throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
-		request.addHeader("X-Request-Id", "a87d92dd-846c-45e9-88b2-818acb2011cf");
+		request.addHeader(RequestIds.HEADER, "a87d92dd-846c-45e9-88b2-818acb2011cf");
 
 		assertThat(idSeenDuring(request)).isEqualTo("a87d92dd-846c-45e9-88b2-818acb2011cf");
-		assertThat(MDC.get(RequestIdFilter.MDC_KEY)).isNull();
+		assertThat(MDC.get(RequestIds.LOG_KEY)).isNull();
 	}
 
 	@Test
@@ -33,7 +33,11 @@ class RequestIdFilterTest {
 		assertThat(idSeenDuring(new MockHttpServletRequest("GET", "/api/v1/me"))).matches("[0-9a-f-]{36}");
 
 		MockHttpServletRequest odd = new MockHttpServletRequest("GET", "/api/v1/me");
-		odd.addHeader("X-Request-Id", "x\n{\"level\":\"ERROR\"}");
+		odd.addHeader(RequestIds.HEADER, "x\n{\"level\":\"ERROR\"}");
 		assertThat(idSeenDuring(odd)).matches("[0-9a-f-]{36}");
+
+		MockHttpServletRequest tooShort = new MockHttpServletRequest("GET", "/api/v1/me");
+		tooShort.addHeader(RequestIds.HEADER, "short");
+		assertThat(idSeenDuring(tooShort)).matches("[0-9a-f-]{36}");
 	}
 }

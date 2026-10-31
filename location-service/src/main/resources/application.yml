@@ -14,8 +14,10 @@ server:
   port: ${SERVER_PORT:8081}
 
 location:
-  # core-app's JWT public key (PEM contents or a file path); tokens are checked, never issued here.
+  # core-app's public keys: its JWKS URL (preferred), or the PEM key (contents or a file path). Exactly one.
+  # Tokens are checked, never issued here.
   jwt:
+    jwks-uri: ${JWT_JWKS_URI:}
     public-key: ${JWT_PUBLIC_KEY:}
     public-key-file: ${JWT_PUBLIC_KEY_FILE:}
     issuer: mobility-core
