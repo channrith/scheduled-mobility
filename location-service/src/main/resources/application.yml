@@ -17,13 +17,12 @@ location:
   # How long a driver's latest position is kept after their last ping.
   position-ttl: 24h
 
-# core-app's public keys (platform-security): its JWKS URL (preferred), or the PEM key (contents or a file path).
-# Exactly one. Tokens are checked, never issued here.
+# Tokens are checked with core-app's public keys from its JWKS (platform-security); never issued here. Locally
+# core-app runs on 8080, so no setting is needed; staging sets http://core-app:8080/.well-known/jwks.json. The PEM
+# variables are deliberately not read: exporting .env (which has JWT_PUBLIC_KEY_FILE for core-app) changes nothing.
 mobility:
   jwt:
-    jwks-uri: ${JWT_JWKS_URI:}
-    public-key: ${JWT_PUBLIC_KEY:}
-    public-key-file: ${JWT_PUBLIC_KEY_FILE:}
+    jwks-uri: ${JWT_JWKS_URI:http://localhost:8080/.well-known/jwks.json}
 
 management:
   endpoints:

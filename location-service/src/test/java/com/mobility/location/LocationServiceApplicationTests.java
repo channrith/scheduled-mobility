@@ -15,6 +15,7 @@ class LocationServiceApplicationTests {
 
 	@DynamicPropertySource
 	static void jwtKey(DynamicPropertyRegistry registry) {
+		registry.add("mobility.jwt.jwks-uri", () -> "");
 		registry.add("mobility.jwt.public-key", TestKeys::publicPem);
 	}
 

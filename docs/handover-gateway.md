@@ -2,7 +2,8 @@
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
 Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Gateway phase 2 in progress** (section 10; decisions in section 2): step 1 committed (`ec1b294`), step 2 built. Read this file and `CLAUDE.md`;
+**Gateway phase 2 done** (section 10; decisions in section 2): steps 1 and 2 on staging (`ec1b294`, `524248e`),
+step 3 built and tested, not yet committed. **Next: phase 3, rate limits** (section 3); plan it first. Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
@@ -51,7 +52,7 @@ and plain routing; it could not do partner credentials or per-client limits.
 ## 3. Phases
 
 1. **Single API host** (this doc): routing, request IDs, header hygiene, edge errors, deploy wiring. Done.
-2. Shared `platform-security` module with JWKS, and the JWT check at the gateway (section 10). In progress.
+2. Shared `platform-security` module with JWKS, and the JWT check at the gateway (section 10). Done.
 3. Rate limits: Redis token buckets per route (auth by IP, quotes by user, partners by client plan, pings by
    driver); 429 problem+json with `Retry-After`. The OTP limits in identity stay (business rules).
 4. Partners when the first one needs it: API keys in `identity.api_keys` (hashed, scopes, plan), an internal
@@ -174,7 +175,7 @@ files were once deleted from the working tree by accident).
   PEM settings (exactly one), so staging keeps working unchanged until step 3.
 - Add the module to `.dockerignore` (`scripts/check.sh` checks this). Proof: all existing tests pass unchanged.
 
-**Step 2, JWT check at the gateway. Built and tested, not yet committed** (`api-gateway/.../auth/SecurityConfiguration`,
+**Step 2, JWT check at the gateway. Done, `524248e`, verified on staging 2026-10-31** (`api-gateway/.../auth/SecurityConfiguration`,
 `error/EdgeProblems`; platform-security's `MobilityJwtAutoConfiguration`; location-service on `mobility.jwt.*`; the
 staging gateway gets `JWT_JWKS_URI=http://core-app:8080/.well-known/jwks.json` in this step so `main` stays deployable;
 `scripts/dev.sh smoke` checks the token at the gateway and logs in when `OTP_FIXED_CODE` is set). The plan:
@@ -183,8 +184,14 @@ public without a token: `/api/v1/auth/**`, `GET /api/v1/document-previews/*`, `/
 `/actuator/info`, Swagger paths. Everything else needs a valid token, else 401 like core-app's. Valid tokens pass
 through unchanged. A bearer token that is present but invalid gets 401 even on a public route (as in core-app).
 
-**Step 3, deploy and docs:** staging Compose: `JWT_JWKS_URI` for location-service (the gateway has it from step 2),
-`JWT_PUBLIC_KEY` removed from location-service; measure the gateway's memory (raise to
+**Step 3, deploy and docs. Built and tested, not yet committed:** location-service defaults to core-app's JWKS
+(`JWT_JWKS_URI`, default `http://localhost:8080/.well-known/jwks.json`) and no longer reads the PEM variables, so
+exporting `.env` cannot conflict; JWT key files are optional locally (core-app's throwaway key works for everyone);
+`scripts/dev.sh` no longer requires them. Verified locally: a token signed by a throwaway key passes the gateway and
+location-service, and after core-app restarts with a new key both accept new tokens and reject old ones **without a
+restart** (rotation). Gateway memory on staging with Spring Security: 200.6 of 256 MiB, limit unchanged. The plan was:
+staging Compose: `JWT_JWKS_URI` for location-service (the gateway has it from step 2), `JWT_PUBLIC_KEY` removed from
+location-service; measure the gateway's memory (raise to
 288m if over ~200 MiB); locally the gateway then needs core-app running (README, CLAUDE.md, `scripts/dev.sh`);
 update this handover.
 

@@ -100,8 +100,8 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
-      # Checks core-app's access tokens (driver pings); never signs any.
-      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
+      # Checks core-app's access tokens (driver pings) with its public keys from its JWKS; never signs any.
+      JWT_JWKS_URI: http://core-app:8080/.well-known/jwks.json
       # Latest driver positions, read by core-app's dispatch.
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}

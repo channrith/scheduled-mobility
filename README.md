@@ -35,8 +35,8 @@ Four processes on your machine, plus the infrastructure in Docker:
 | Process | Port | Needs |
 |---|---|---|
 | core-app | http://localhost:8080 | Postgres, Redis, RabbitMQ |
-| location-service | http://localhost:8081 | Redis, core-app's **public** JWT key |
-| api-gateway | http://localhost:8090 | core-app and location-service (it only routes to them) |
+| location-service | http://localhost:8081 | Redis; core-app running (it checks tokens with core-app's keys from its JWKS) |
+| api-gateway | http://localhost:8090 | core-app and location-service (it checks tokens like location-service, then routes) |
 | web-console | http://localhost:3000 | core-app (directly, or through the gateway) |
 
 ### One-time setup
@@ -44,18 +44,20 @@ Four processes on your machine, plus the infrastructure in Docker:
 ```bash
 # 1. Local settings (defaults match docker-compose.yml). .env is git-ignored.
 cp .env.example .env
-
-# 2. JWT keys, shared by every service (*.pem is git-ignored)
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out jwt-private.pem
-openssl pkey -in jwt-private.pem -pubout -out jwt-public.pem
 ```
 
-3. In `.env`, set `JWT_PRIVATE_KEY_FILE=./jwt-private.pem` and `JWT_PUBLIC_KEY_FILE=./jwt-public.pem`.
-   Without them core-app generates a throwaway key pair, and location-service (which checks core-app's tokens)
-   cannot start.
-4. To sign in to the console you need an ADMIN: set `BOOTSTRAP_ADMIN_PHONE` (e.g. `012000001`) in `.env`. It is
+2. **JWT keys (optional).** Without them core-app's `local` profile generates a throwaway key pair at startup, and
+   location-service and the gateway fetch it from core-app's JWKS (`http://localhost:8080/.well-known/jwks.json`),
+   so everything works. The only catch: after restarting core-app, tokens issued before are rejected; sign in
+   again. To keep tokens valid across restarts, generate keys (`*.pem` is git-ignored) and set
+   `JWT_PRIVATE_KEY_FILE=./jwt-private.pem` and `JWT_PUBLIC_KEY_FILE=./jwt-public.pem` in `.env`:
+   ```bash
+   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out jwt-private.pem
+   openssl pkey -in jwt-private.pem -pubout -out jwt-public.pem
+   ```
+3. To sign in to the console you need an ADMIN: set `BOOTSTRAP_ADMIN_PHONE` (e.g. `012000001`) in `.env`. It is
    granted ADMIN at core-app's first start.
-5. Console: `cd web-console && cp .env.example .env.local && npm install`.
+4. Console: `cd web-console && cp .env.example .env.local && npm install`.
 
 ### Start
 
@@ -105,8 +107,8 @@ Stop each process with Ctrl+C. Stop infrastructure with `docker compose down`; a
 volumes.
 
 **If something does not start:**
-- location-service: *"Set exactly one of JWT_JWKS_URI ..., JWT_PUBLIC_KEY (PEM) or JWT_PUBLIC_KEY_FILE"*: `.env` was
-  not exported in that terminal, or `JWT_PUBLIC_KEY_FILE` is not set (step 3).
+- Every token gets 401 `auth.unauthorized` from the gateway (or location-service): core-app is not running, so its
+  keys cannot be fetched; or core-app restarted with a throwaway key and the token is older: sign in again.
 - core-app: *"Unable to obtain connection from database"*: Postgres was not ready yet; use `--wait` as above.
 - *"Port 8080 was already in use"*: a previous run is still going: `lsof -nP -iTCP:8080 -sTCP:LISTEN`.
 - `npm run dev` says port 3000 is in use and picks 3001: the Dockerised console is running; `docker compose stop web-console`.
@@ -129,7 +131,8 @@ API docs on. For any environment other than `local`, set these variables:
 | `OTP_FIXED_CODE` | **Test environments only.** Every phone logs in with this code (e.g. `1234`) instead of a random one; rate limits still apply. Anyone who knows a phone number can then log in as that user, so never use it with real personal data. Startup fails if a `prod`/`production` profile is active |
 | `BOOTSTRAP_ADMIN_PHONE`, `BOOTSTRAP_ADMIN_NAME` | Granted ADMIN at startup while no ADMIN exists yet (audited, actor = system); ignored afterwards, so it can stay set |
 | `JWT_PRIVATE_KEY_FILE`, `JWT_PUBLIC_KEY_FILE` | Paths to the RS256 access-token keys, PEM (PKCS#8 / X.509) |
-| `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Local profile generates a throwaway pair if neither is set |
+| `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Local profile generates a throwaway pair if neither is set. **core-app only**: it is the only service that holds keys |
+| `JWT_JWKS_URI` | location-service and api-gateway: core-app's public keys, which they use to check tokens (default `http://localhost:8080/.well-known/jwks.json`; staging `http://core-app:8080/.well-known/jwks.json`). Not reachable from outside |
 | `IDEMPOTENCY_ENCRYPTION_KEY` | Base64 AES-256 key encrypting cached idempotent responses (`openssl rand -base64 32`) |
 | `PII_ENCRYPTION_KEY` | Base64 AES-256 key for personal data: national ID, bank account, document files (`openssl rand -base64 32`) |
 | `PII_HASH_SECRET` | HMAC secret (≥ 32 chars) for blind indexes, e.g. duplicate national ID detection |
@@ -166,8 +169,9 @@ docker build --build-arg MODULE=api-gateway -t mobility/api-gateway .
 A new module must also be added to the `.dockerignore` allowlist, or its image build fails.
 
 Images run as a non-root user with the heap at 75% of the container memory limit. Configuration is the same
-environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Mount JWT keys read-only and point
-`JWT_PRIVATE_KEY_FILE` / `JWT_PUBLIC_KEY_FILE` at them.
+environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Only core-app gets JWT keys (mount them
+read-only and point `JWT_PRIVATE_KEY_FILE` / `JWT_PUBLIC_KEY_FILE` at them, or pass the PEM contents); the other
+services get `JWT_JWKS_URI`.
 
 ## Staging deployment
 
