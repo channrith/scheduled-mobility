@@ -15,17 +15,9 @@ location:
   tracking:
     events-channel: ${LOCATION_EVENTS_CHANNEL:mobility:local:driver-location:v1}
 
-  logging:
-    level:
-      com.mobility.location.realtime: DEBUG
-
-  server:
-    error:
-      include-message: always
-
 logging:
   level:
-    com.mobility.location.realtime: DEBUG
+    com.mobility.location.realtime: ${LOCATION_REALTIME_LOG_LEVEL:INFO}
 
 management:
   endpoint:

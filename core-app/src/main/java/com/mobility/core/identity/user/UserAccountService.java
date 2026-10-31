@@ -47,6 +47,52 @@ class UserAccountService implements UserAccounts {
 
 	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
+	public UserAccount ensureUserWithScopedRole(String phone, String fullName, Role role, UUID scopeId) {
+		if (!role.isCorporate() || scopeId == null) {
+			throw new IllegalArgumentException("Only corporate roles are scoped, and they need a scope");
+		}
+		String e164 = PhoneNumbers.normalize(phone)
+			.orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "phone.invalid"));
+		User user = users.findByPhoneE164(e164)
+			.orElseGet(() -> users.save(User.createByStaff(e164, fullName, Language.DEFAULT)));
+		user.setFullNameIfMissing(fullName);
+		if (user.grant(role, scopeId)) {
+			auditLog.record("identity.role.granted", "user", user.getId(),
+					Map.of("role", role.name(), "scopeId", scopeId));
+		}
+		return new UserAccount(user.getId(), e164);
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void grantRole(UUID userId, Role role, UUID scopeId) {
+		if (role.isCorporate() != (scopeId != null)) {
+			throw new IllegalArgumentException("Corporate roles need a scope; other roles must not have one");
+		}
+		User user = users.findWithRolesById(userId)
+			.orElseThrow(() -> new IllegalArgumentException("Unknown user " + userId));
+		if (user.grant(role, scopeId)) {
+			java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
+			details.put("role", role.name());
+			if (scopeId != null) {
+				details.put("scopeId", scopeId);
+			}
+			auditLog.record("identity.role.granted", "user", userId, details);
+		}
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void revokeScopedRole(UUID userId, Role role, UUID scopeId) {
+		User user = users.findWithRolesById(userId)
+			.orElseThrow(() -> new IllegalArgumentException("Unknown user " + userId));
+		if (user.revoke(role, scopeId)) {
+			auditLog.record("identity.role.revoked", "user", userId, Map.of("role", role.name(), "scopeId", scopeId));
+		}
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
 	public void updateProfile(UUID userId, String fullName, Language preferredLanguage) {
 		User user = users.findById(userId)
 			.orElseThrow(() -> new IllegalArgumentException("Unknown user " + userId));

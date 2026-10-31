@@ -2,7 +2,7 @@
 
 Import `driver.postman_collection.json` and `driver-local.postman_environment.json`, then select **Scheduled Mobility — Local Driver** as the active environment.
 
-Start the backends with `./scripts/run-local.sh`. The default URLs are `http://localhost:8080` (core) and `http://localhost:8081` (location); update the environment if you choose other ports.
+Start the backends with `./scripts/run-local.sh`. Both APIs use the gateway origin `http://localhost:8090`; update both environment origins if you choose another gateway port.
 
 ## Login and driver setup
 
@@ -29,3 +29,5 @@ JSON mutations generate a fresh Idempotency-Key for each send. For a retry, set 
 Refresh responses replace the stored access and refresh tokens. Logout revokes the refresh session. Auth requests intentionally omit bearer authentication, so expired access tokens do not block refresh.
 
 The exported environment contains no tokens or private keys. Login stores tokens in your selected Postman environment; remove them before exporting or sharing it. No live login, driver registration or onboarding mutations were executed while generating these files.
+
+Both `coreBaseUrl` and `locationBaseUrl` are gateway origins (`http://localhost:8090`, without `/api/v1`). In staging set both to `https://<API_HOST>`. The live socket is `ws://localhost:8090/api/v1/drivers/me/location/live` (staging: `wss://<API_HOST>/api/v1/drivers/me/location/live`); add the Bearer Authorization header in Postman. Never put the token in the URL. See `../gateway-integration.md` for curl and runtime-check instructions.

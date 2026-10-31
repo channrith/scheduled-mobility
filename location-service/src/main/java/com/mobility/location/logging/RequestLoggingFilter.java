@@ -35,9 +35,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String incoming = request.getHeader(HEADER);
-        String requestId = incoming != null && UUID_PATTERN.matcher(incoming).matches()
-                ? incoming : UUID.randomUUID().toString();
         String previous = MDC.get(MDC_KEY);
+        Object established = request.getAttribute(MDC_KEY);
+        String requestId = established instanceof String id ? id : incoming != null && UUID_PATTERN.matcher(incoming).matches()
+                ? incoming : UUID.randomUUID().toString();
         MDC.put(MDC_KEY, requestId);
         response.setHeader(HEADER, requestId);
         long started = System.nanoTime();

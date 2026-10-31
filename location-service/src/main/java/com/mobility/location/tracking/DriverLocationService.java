@@ -31,7 +31,7 @@ public class DriverLocationService {
         this.jumpValidator = jumpValidator;
     }
 
-    public void update(
+    public boolean update(
             Jwt jwt,
             UpdateDriverLocationRequest request
     ) {
@@ -60,7 +60,7 @@ public class DriverLocationService {
 
                     if (!request.recordedAt()
                             .isAfter(lastLocation.recordedAt())) {
-                        return;
+                        return false;
                     }
 
                     jumpValidator.validate(lastLocation, request);
@@ -68,13 +68,14 @@ public class DriverLocationService {
 
                 var result = repository.compareAndSave(
                         driver.driverId(),
+                        driver.userId(),
                         request,
                         receivedAt,
                         previous
                 );
 
                 if (result != DriverLocationRepository.SaveResult.CONFLICT) {
-                    return;
+                    return result == DriverLocationRepository.SaveResult.STORED;
                 }
             }
 

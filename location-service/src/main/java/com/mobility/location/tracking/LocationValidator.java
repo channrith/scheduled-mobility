@@ -40,9 +40,9 @@ public class LocationValidator {
 
         if (latitude == null
                 || !Double.isFinite(latitude)
-                || latitude < -90
-                || latitude > 90) {
-            throw invalid("Latitude must be between -90 and 90");
+                || latitude < -85.05112878
+                || latitude > 85.05112878) {
+            throw invalid("Latitude must be within the Redis GEO range");
         }
 
         Double longitude = request.longitude();

@@ -58,9 +58,39 @@ result before starting a new operation; the version check prevents a duplicate c
 PostgreSQL and the Redis mutation also do not form a cross-store transaction: eligibility is checked
 immediately before updating, and this endpoint does not continuously enforce it after the driver's choice.
 
+## Driver presence (location-service)
+
+`GET http://localhost:8090/api/v1/drivers/me/presence` requires a valid DRIVER token and resolves the
+signed-in user's driver through core-app. Registered drivers can read presence in any onboarding status.
+It returns only `online`, `lastSeenAt`, and `timeoutSeconds`, with `Cache-Control: no-store`.
+
+Presence is the separate Redis string `location:driver:{driverId}:presence`, containing the server's
+receipt time for the last accepted GPS update. `LOCATION_PRESENCE_TIMEOUT` configures the shared writer/read
+setting `location.presence.timeout` (default `60s`, positive whole seconds). A missing/expired key returns
+`{"online":false,"lastSeenAt":null,"timeoutSeconds":60}`. A valid stored timestamp returns online; Redis
+errors or malformed timestamps return HTTP 503. Reads perform one GET and never refresh the TTL.
+Presence is independent of availability, approval, and GPS freshness.
+
+```bash
+curl http://localhost:8090/api/v1/drivers/me/presence \
+  -H "Authorization: Bearer ${DRIVER_ACCESS_TOKEN}"
+```
+
+For Postman, use GET `{{location_base_url}}/api/v1/drivers/me/presence` with Bearer Token
+`{{driver_access_token}}`; set `location_base_url` to `http://localhost:8090`. No body or Idempotency-Key
+is needed. This service has no springdoc/OpenAPI snapshot workflow; the core-app snapshot documents
+core-app endpoints only.
+
+Location-service logs HTTP completion with method, matched route template, status, duration in
+milliseconds, and an `X-Request-Id` also returned in the response. Gateway request IDs are preserved; valid UUID IDs are also accepted directly;
+other values are replaced. Headers, request bodies, query strings, raw paths, and coordinates are not
+logged by the request filter. Local console logs are readable text; staging keeps the existing ECS JSON
+format. Set `LOCATION_LOG_LEVEL` (default `INFO`), `LOCATION_REALTIME_LOG_LEVEL` (local, default `INFO`),
+or `LOCATION_REQUEST_LOGGING_ENABLED=false` to tune logging.
+
 ## Run locally
 
-To start both backends with `.env` loaded and the `local` profile:
+To start both backends and the API gateway with `.env` loaded and the `local` profile:
 
 ```bash
 docker compose up -d --wait postgres redis rabbitmq
@@ -68,8 +98,8 @@ docker compose up -d --wait postgres redis rabbitmq
 ```
 
 Configure `.env` and JWT key files first (see Configuration below). Logs are written to
-`var/log/core-app.log` and `var/log/location-service.log`. Ctrl+C stops both backends.
-If either backend exits, the script stops the other one too.
+`var/log/core-app.log`, `var/log/location-service.log` and `var/log/api-gateway.log`. Ctrl+C stops all three.
+If any process exits, the script stops the other processes too.
 
 ```bash
 # 1. Configure local credentials and shared JWT keys
@@ -88,10 +118,27 @@ docker compose up -d
 ./mvnw spring-boot:run -pl location-service -Dspring-boot.run.profiles=local
 ```
 
+Run the gateway too when launching the modules manually:
+
+```bash
+SERVER_PORT=8090 ./mvnw spring-boot:run -pl api-gateway
+```
+
+Mobile and Postman use **`http://localhost:8090`** locally and **`https://<API_HOST>`** in staging.
+The live socket is **`ws://localhost:8090/api/v1/drivers/me/location/live`** locally,
+**`wss://<API_HOST>/api/v1/drivers/me/location/live`** in staging, with a Bearer Authorization header.
+Upstream origins have no `/api/v1` suffix. Internal `CORE_BASE_URL` stays on core-app (`:8080`),
+separate from the mobile gateway origin. The legacy staging `LOCATION_HOST` remains available for
+existing clients; new integrations use `API_HOST`. Gateway health describes the gateway itself;
+backend readiness is checked on the private service ports.
+
+Route table, curl examples and local verification: [docs/gateway-integration.md](docs/gateway-integration.md).
+
 Flyway applies migrations automatically on core-app startup.
 
 | URL                                    | What                                   |
 |----------------------------------------|----------------------------------------|
+| http://localhost:8090/actuator/health  | gateway health (public)               |
 | http://localhost:8080/actuator/health  | core-app health (db, redis, rabbit)    |
 | http://localhost:8081/actuator/health  | location-service health                |
 | http://localhost:15672                 | RabbitMQ management UI (`mobility` / `mobility`) |
@@ -130,7 +177,7 @@ token containing DRIVER. `OTP_FIXED_CODE`, if desired, is a separate local testi
 the seed does not change it or bypass OTP login. Use that token for:
 
 ```bash
-curl -i http://localhost:8081/api/v1/drivers/me/location \
+curl -i http://localhost:8090/api/v1/drivers/me/location \
   -H "Authorization: Bearer $DRIVER_ACCESS_TOKEN" \
   -H 'Content-Type: application/json' \
   --data "{\"latitude\":11.5564,\"longitude\":104.9282,\"accuracyMeters\":10,\"recordedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
@@ -156,7 +203,10 @@ API docs on. For any environment other than `local`, set these variables:
 | `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY` | Alternative: the PEM contents inline. Set either these or the `_FILE` variants. Both backends must use the same public key |
 | `JWT_PUBLIC_KEY_LOCATION` | Optional location-service public key resource (e.g. `file:/path/jwt-public.pem`); locally defaults to `JWT_PUBLIC_KEY_FILE`. Leave empty when using inline `JWT_PUBLIC_KEY` |
 | `JWT_ISSUER` | Shared token issuer for both backends (default `mobility-core`) |
-| `CORE_BASE_URL` | Core API URL used by location-service (`http://localhost:8080` locally; `http://core-app:8080` in staging) |
+| `CORE_APP_URL`, `LOCATION_SERVICE_URL` | Gateway upstream origins, default `http://localhost:8080` / `http://localhost:8081`; no path prefix |
+| `GATEWAY_SERVER_PORT` | Local launcher gateway port, default `8090` |
+| `LOCATION_EVENTS_CHANNEL`, `LOCATION_PRESENCE_TIMEOUT` | Redis event channel and presence TTL (default `60s`) |
+| `CORE_BASE_URL` | Internal core API URL used by location-service (`http://localhost:8080` locally; `http://core-app:8080` in staging) |
 | `IDEMPOTENCY_ENCRYPTION_KEY` | Base64 AES-256 key encrypting cached idempotent responses (`openssl rand -base64 32`) |
 | `PII_ENCRYPTION_KEY` | Base64 AES-256 key for personal data: national ID, bank account, document files (`openssl rand -base64 32`) |
 | `PII_HASH_SECRET` | HMAC secret (≥ 32 chars) for blind indexes, e.g. duplicate national ID detection |
@@ -164,7 +214,7 @@ API docs on. For any environment other than `local`, set these variables:
 | `STORAGE_LOCAL_DIR` | `local`: where uploaded documents are stored (default `./var/storage`, git-ignored) |
 | `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`, `STORAGE_S3_BUCKET`, `STORAGE_S3_ACCESS_KEY`, `STORAGE_S3_SECRET_KEY` | `s3`: any S3-compatible store, e.g. endpoint `https://sgp1.digitaloceanspaces.com`, region `sgp1`. Endpoint empty = AWS S3. The bucket must exist and be private |
 | `WEB_CONSOLE_ORIGINS` | Browser origins allowed by CORS (comma-separated). Local profile: `http://localhost:3000`; none elsewhere |
-| `SERVER_PORT` | HTTP port (default 8080 core-app, 8081 location-service) |
+| `SERVER_PORT` | Per-process HTTP port (default 8080 core-app, 8081 location-service, 8090 api-gateway) |
 
 Generate JWT keys (`*.pem` is git-ignored):
 ```bash
@@ -199,12 +249,14 @@ environment variables as above, plus `SPRING_PROFILES_ACTIVE=staging`. Mount JWT
 
 ## Staging deployment
 
-`deploy/staging/` runs everything on one server with Docker Compose: Caddy (HTTPS), both apps,
+`deploy/staging/` runs everything on one server with Docker Compose: Caddy (HTTPS), api-gateway, both backend apps,
 PostgreSQL + PostGIS, Redis and RabbitMQ. Documents go to a Docker volume (`STORAGE_TYPE=local`) or an
 S3-compatible bucket (`s3`); once buckets exist, `backup.sh` uploads a nightly `pg_dump` to a second bucket. `generate-secrets.sh` fills `.env` from `.env.staging.example`. The apps
 connect as a non-superuser `mobility_app`; `postgres/init` creates it and the extensions on first start. Setup and operations: [docs/staging.md](docs/staging.md).
 
 ## Authentication
+
+Shared JWT design and production hardening proposal: [docs/jwt-architecture-review.md](docs/jwt-architecture-review.md).
 
 Phone OTP login. There is no SMS gateway yet: the `LoggingSmsSender` stub writes the code to the core-app log.
 
@@ -217,9 +269,9 @@ Phone OTP login. There is no SMS gateway yet: the `LoggingSmsSender` stub writes
 | `GET /api/v1/me` | Current user's profile and roles (`Authorization: Bearer …`) |
 
 ```bash
-curl -X POST localhost:8080/api/v1/auth/otp/request -H 'Content-Type: application/json' -d '{"phone":"012345678"}'
+curl -X POST localhost:8090/api/v1/auth/otp/request -H 'Content-Type: application/json' -d '{"phone":"012345678"}'
 # read the code from the core-app log ("SMS to +855*****678: 4821 ...")
-curl -X POST localhost:8080/api/v1/auth/otp/verify -H 'Content-Type: application/json' \
+curl -X POST localhost:8090/api/v1/auth/otp/verify -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(uuidgen)" -d '{"phone":"012345678","code":"4821"}'
 ```
 
@@ -275,7 +327,7 @@ with that phone.
 ## Web console
 
 ```bash
-cd web-console && npm install && npm run dev      # http://localhost:3000, talks to core-app on :8080
+cd web-console && npm install && npm run dev      # http://localhost:3000, talks to the gateway on :8090
 ```
 or `docker compose up -d web-console` (core-app still runs on the host). Sign in with a staff phone
 number; with the `local` profile the code appears in the core-app log. Pages: drivers (search and
@@ -300,8 +352,8 @@ The OpenAPI 3 spec is generated from the controllers (springdoc), so it always m
 
 | URL (local profile) | What |
 |---|---|
-| http://localhost:8080/swagger-ui.html | Interactive docs. Click **Authorize** and paste an access token (without `Bearer`) |
-| http://localhost:8080/v3/api-docs/all | Full spec (JSON); also `/auth`, `/driver-app`, `/admin` groups |
+| http://localhost:8090/swagger-ui.html | Interactive docs. Click **Authorize** and paste an access token (without `Bearer`) |
+| http://localhost:8090/v3/api-docs/all | Full spec (JSON); also `/auth`, `/driver-app`, `/admin` groups |
 
 Every operation documents its required roles (`x-required-roles`, from `@PreAuthorize`), bearer
 security, `Accept-Language`, `Idempotency-Key` (mutating endpoints) and its problem+json errors.

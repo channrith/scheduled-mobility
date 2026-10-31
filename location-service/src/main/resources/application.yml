@@ -5,7 +5,6 @@ spring:
   threads:
     virtual:
       enabled: true
-
   data:
     redis:
       host: ${REDIS_HOST}
@@ -26,7 +25,17 @@ location:
     retention: ${LOCATION_RETENTION:24h}
     max-speed-meters-per-second: ${LOCATION_MAX_SPEED_METERS_PER_SECOND:60}
     reacquisition-gap: ${LOCATION_REACQUISITION_GAP:120s}
-    events-channel: ${LOCATION_EVENTS_CHANNEL}
+    events-channel: ${LOCATION_EVENTS_CHANNEL:mobility:driver-location:v1}
+
+  presence:
+    timeout: ${LOCATION_PRESENCE_TIMEOUT:60s}
+
+  logging:
+    requests-enabled: ${LOCATION_REQUEST_LOGGING_ENABLED:true}
+
+logging:
+  level:
+    com.mobility.location: ${LOCATION_LOG_LEVEL:INFO}
 
 server:
   port: ${SERVER_PORT:8081}

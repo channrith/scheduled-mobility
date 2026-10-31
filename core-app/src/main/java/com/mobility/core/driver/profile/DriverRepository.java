@@ -12,6 +12,8 @@ public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
 	Optional<Driver> findByUserId(UUID userId);
 
+	java.util.List<Driver> findByStatus(com.mobility.core.driver.DriverStatus status);
+
 	boolean existsByUserId(UUID userId);
 
 	boolean existsByNationalIdHash(byte[] nationalIdHash);

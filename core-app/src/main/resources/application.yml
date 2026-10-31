@@ -17,7 +17,7 @@ spring:
       max-file-size: 11MB
       max-request-size: 23MB
   messages:
-    basename: i18n/shared,i18n/identity,i18n/driver
+    basename: i18n/shared,i18n/identity,i18n/driver,i18n/corporate,i18n/place,i18n/pricing,i18n/booking,i18n/dispatch
     fallback-to-system-locale: false
   jpa:
     open-in-view: false
@@ -40,6 +40,8 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+    # The outbox relay marks an event published only after RabbitMQ confirms it.
+    publisher-confirm-type: correlated
 
 identity:
   otp:
@@ -93,6 +95,19 @@ springdoc:
   override-with-generic-response: false
   writer-with-order-by-keys: true
   paths-to-exclude: /api/v1/test/**
+
+pricing:
+  # City codes rules and zones may use (comma-separated).
+  cities: ${PRICING_CITIES:PHNOM_PENH}
+  quote-ttl: ${PRICING_QUOTE_TTL:15m}
+  # Until an admin sets them in the console.
+  default-fuel-index: 1.000
+  default-usd-khr-rate: ${PRICING_DEFAULT_USD_KHR_RATE:4100}
+  routing:
+    # OSRM for real road distances; STRAIGHT_LINE (estimate) only for tests and local runs, refused in production.
+    provider: ${ROUTING_PROVIDER:STRAIGHT_LINE}
+    osrm-url: ${OSRM_URL:}
+    timeout: 5s
 
 server:
   port: ${SERVER_PORT:8080}

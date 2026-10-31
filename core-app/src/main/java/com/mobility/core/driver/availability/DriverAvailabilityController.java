@@ -47,7 +47,7 @@ class DriverAvailabilityController {
 	ResponseEntity<AvailabilityResponse> get() {
 		var driver = drivers.byUserId(currentUser.require().userId())
 			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "driver.not-found"));
-		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(availability.get(driver.id()));
+		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(availability.get(driver.driverId()));
 	}
 
 	@Operation(summary = "Set my driver availability",
@@ -75,6 +75,6 @@ class DriverAvailabilityController {
 		}
 		var driver = drivers.byUserId(currentUser.require().userId())
 			.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "driver.not-found"));
-		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(availability.update(driver.id(), request));
+		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(availability.update(driver.driverId(), request));
 	}
 }

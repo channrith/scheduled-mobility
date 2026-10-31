@@ -42,3 +42,40 @@ export const OWNERSHIPS: VehicleOwnership[] = ["DRIVER", "THIRD_PARTY", "COMPANY
 export const PERSONAL_DOCUMENTS: DocumentType[] = ["NATIONAL_ID", "DRIVING_LICENSE", "PROFILE_PHOTO"];
 export const TWO_SIDED: DocumentType[] = ["NATIONAL_ID", "DRIVING_LICENSE", "VEHICLE_REGISTRATION"];
 export const EXPIRING: DocumentType[] = ["NATIONAL_ID", "DRIVING_LICENSE", "VEHICLE_REGISTRATION"];
+
+export type AccountView = Model<"AccountView">;
+export type AccountDetail = Model<"AccountDetail">;
+export type MemberView = Model<"MemberView">;
+export type MemberPolicy = Schemas["MemberPolicy"];
+export type HoursWindow = NonNullable<Schemas["HoursWindow"]>;
+export type CostCenterView = Model<"CostCenterView">;
+export type PlaceView = Model<"PlaceView">;
+export type PlaceHit = Model<"PlaceHit">;
+
+export type AccountStatus = NonNullable<Schemas["AccountView"]["status"]>;
+export type MemberRole = NonNullable<Schemas["MemberView"]["role"]>;
+export type DayOfWeek = NonNullable<Schemas["HoursWindow"]["days"]>[number];
+export type PlaceType = NonNullable<Schemas["PlaceView"]["type"]>;
+
+export const CURRENCIES = ["USD", "KHR"] as const;
+export type Currency = (typeof CURRENCIES)[number];
+export const MEMBER_ROLES: MemberRole[] = ["CORPORATE_ADMIN", "CORPORATE_BOOKER", "RIDER"];
+export const DAYS: DayOfWeek[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+export const PLACE_TYPES: PlaceType[] = [
+  "AIRPORT", "HOTEL", "MALL", "MARKET", "HOSPITAL", "SCHOOL", "EMBASSY", "OFFICE", "LANDMARK", "TRANSPORT", "OTHER",
+];
+
+export type RuleView = Model<"RuleView">;
+export type PriceLineView = Model<"PriceLineView">;
+export type HistoryEntryView = Model<"HistoryEntryView">;
+export type ZoneView = Model<"ZoneView">;
+export type SettingView = Model<"SettingView">;
+export type SettingsView = Model<"SettingsView">;
+export type QuoteView = Model<"QuoteView">;
+export type QuoteLineView = Model<"QuoteLineView">;
+
+export type ZoneType = NonNullable<Schemas["ZoneView"]["type"]>;
+export type QuoteLineType = NonNullable<Schemas["QuoteLineView"]["type"]>;
+export type LatLng = { latitude: number; longitude: number };
+
+export const ZONE_TYPES: ZoneType[] = ["CITY", "AIRPORT", "RESTRICTED"];

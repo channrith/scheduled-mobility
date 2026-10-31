@@ -27,12 +27,15 @@ services:
     environment:
       API_HOST: ${API_HOST:?set API_HOST in .env}
       LOCATION_HOST: ${LOCATION_HOST:?set LOCATION_HOST in .env}
+      CONSOLE_HOST: ${CONSOLE_HOST:?set CONSOLE_HOST in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
+      api-gateway:
+        condition: service_healthy
       core-app:
         condition: service_healthy
     mem_limit: ${CADDY_MEM_LIMIT:-128m}
@@ -70,7 +73,8 @@ services:
       STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-}
       STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:-}
       STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:-}
-      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      # Off by default: a public spec maps out the admin API. true = Swagger UI on this host.
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}
       # Heap share of mem_limit; the rest is metaspace, threads and buffers (~200 MB).
       JAVA_TOOL_OPTIONS: ${CORE_APP_JAVA_OPTS:--XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError}
     volumes:
@@ -100,6 +104,8 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}
       CORE_BASE_URL: http://core-app:8080
+      LOCATION_EVENTS_CHANNEL: ${LOCATION_EVENTS_CHANNEL:-mobility:staging:driver-location:v1}
+      LOCATION_PRESENCE_TIMEOUT: ${LOCATION_PRESENCE_TIMEOUT:-60s}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
       JWT_ISSUER: ${JWT_ISSUER:-mobility-core}
       JAVA_TOOL_OPTIONS: ${LOCATION_SERVICE_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
@@ -114,7 +120,51 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    # Security and the Redis client need a little more than the bare skeleton did.
     mem_limit: ${LOCATION_SERVICE_MEM_LIMIT:-256m}
+    logging: *logging
+
+  # The single API host: Caddy sends API_HOST here, and the console calls it on the internal network. Routes to
+  # core-app and location-service; request IDs and edge errors only, no business logic.
+  api-gateway:
+    image: ${IMAGE_REPOSITORY}/api-gateway:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      CORE_APP_URL: http://core-app:8080
+      LOCATION_SERVICE_URL: http://location-service:8081
+      GATEWAY_CONNECT_TIMEOUT_MS: ${GATEWAY_CONNECT_TIMEOUT_MS:-2000}
+      GATEWAY_RESPONSE_TIMEOUT: ${GATEWAY_RESPONSE_TIMEOUT:-30s}
+      JAVA_TOOL_OPTIONS: ${API_GATEWAY_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8090/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Measured ~185 MiB in use under load; 192m is too tight.
+    mem_limit: ${API_GATEWAY_MEM_LIMIT:-256m}
+    logging: *logging
+
+  # Admin web console (Next.js). Tokens stay in its httpOnly cookies; the browser only talks to the
+  # console, which calls the API gateway on the internal network. Secure cookies need HTTPS, which Caddy provides.
+  web-console:
+    image: ${IMAGE_REPOSITORY}/web-console:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      CORE_API_URL: http://api-gateway:8090
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    # Uploads pass through the console in memory (up to 24 MB per request): ~110 MB at rest, ~150 MB during one 14 MB upload.
+    mem_limit: ${WEB_CONSOLE_MEM_LIMIT:-256m}
     logging: *logging
 
   postgres:

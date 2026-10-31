@@ -104,8 +104,9 @@ public class User {
 		}
 	}
 
-	public void revoke(Role role, UUID scopeId) {
-		roles.removeIf(r -> r.matches(role, scopeId));
+	/** @return true if the role was held and is now removed */
+	public boolean revoke(Role role, UUID scopeId) {
+		return roles.removeIf(r -> r.matches(role, scopeId));
 	}
 
 	public void changeStatus(UserStatus status) {

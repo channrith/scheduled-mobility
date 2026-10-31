@@ -8,3 +8,5 @@
 !core-app/src/main/
 !location-service/pom.xml
 !location-service/src/main/
+!api-gateway/pom.xml
+!api-gateway/src/main/

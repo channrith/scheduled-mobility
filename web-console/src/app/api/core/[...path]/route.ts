@@ -23,6 +23,8 @@ const FORWARDED_RESPONSE_HEADERS = [
   "location",
   "retry-after",
   "idempotent-replayed",
+  // Set by the API gateway; lets a console error be matched to the server logs.
+  "x-request-id",
   "referrer-policy",
 ];
 

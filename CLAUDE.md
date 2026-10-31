@@ -30,6 +30,22 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - Docker Compose for local development
 - GitHub Actions for CI
 
+## Web console (`web-console/`)
+- Stack: Next.js 16 (App Router, TS), Tailwind + shadcn/ui (Base UI flavour: `render` prop, not `asChild`),
+  TanStack Table v9 + TanStack Query, React Hook Form + Zod, next-intl, lucide-react.
+  Read `node_modules/next/dist/docs/` before using Next APIs (`proxy.ts`, async `params`/`cookies()`).
+- One route group per area (`(admin)`, later `(dispatch)`, `(corporate)`), sharing the app shell.
+- Auth: BFF only. Tokens live in httpOnly cookies; the browser calls `/api/core/...`, never core-app.
+  Mutations send an `Idempotency-Key`. No tokens in localStorage.
+- API types are generated from `docs/openapi.json` (`npm run gen:api`); don't hand-write API types.
+- Role-based UI via `src/lib/auth/roles.ts`, mirroring backend `@PreAuthorize` (the backend enforces).
+- i18n: every string in `messages/km.json` (default) and `en.json`; language in a cookie, not the URL.
+  Dates in Asia/Phnom_Penh; Khmer dates are formatted by hand (browsers lack Khmer `Intl` data).
+- Khmer typography: Kantumruy Pro, line-height ≥ 1.65; no fixed small heights or `overflow-hidden`
+  that could clip Khmer marks in buttons, inputs, badges or table cells.
+- Native `<select>` for forms/filters (tablet-friendly). Must work on tablets.
+- CI: `npm run lint`, `npm run typecheck`, `npm run build`, and API types in sync with `docs/openapi.json`.
+
 ## Domain rules (important)
 - **Money**: store as `BIGINT` minor units + `CHAR(3)` currency (USD cents or KHR riel).
   Never use float/double for money. Show USD and KHR equivalents in quotes.

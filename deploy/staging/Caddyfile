@@ -1,4 +1,4 @@
-# HTTPS for both apps. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
+# HTTPS for the API (through the gateway), the location service and the admin console. Certificates come from Let's Encrypt (Caddy falls back to ZeroSSL) and renew
 # automatically. Hostnames are set in .env; without a domain use sslip.io, e.g. api.203-0-113-7.sslip.io.
 {
 	email {$ACME_EMAIL}
@@ -9,7 +9,6 @@
 	header {
 		-Server
 		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
 	}
 	log {
 		output stdout
@@ -19,6 +18,7 @@
 
 {$API_HOST} {
 	import common
+	header Referrer-Policy no-referrer
 	# Only health is public on actuator; everything else there stays internal.
 	@actuator {
 		path /actuator/*
@@ -28,11 +28,14 @@
 	request_body {
 		max_size 24MB
 	}
-	reverse_proxy core-app:8080
+	# One host for all apps: the gateway routes to core-app and location-service.
+	reverse_proxy api-gateway:8090
 }
 
+# Kept until the apps use API_HOST for pings too; then this block and LOCATION_HOST go.
 {$LOCATION_HOST} {
 	import common
+	header Referrer-Policy no-referrer
 	@actuator {
 		path /actuator/*
 		not path /actuator/health /actuator/health/*
@@ -40,4 +43,22 @@
 	respond @actuator 404
 	# WebSocket upgrades are proxied automatically.
 	reverse_proxy location-service:8081
+}
+
+{$CONSOLE_HOST} {
+	import common
+	header {
+		# Map tiles: OpenStreetMap blocks tile requests without a Referer. Other sites get the origin only.
+		Referrer-Policy strict-origin-when-cross-origin
+		# Spring adds HSTS for the API; Next.js does not, so Caddy adds it here.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Document previews are same-origin <img>/<iframe>; no other site may frame the console.
+		Content-Security-Policy "frame-ancestors 'self'"
+		X-Frame-Options SAMEORIGIN
+	}
+	# Two-sided document uploads pass through the console to core-app.
+	request_body {
+		max_size 24MB
+	}
+	reverse_proxy web-console:3000
 }

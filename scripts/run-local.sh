@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start both backends using the repository's local environment.
+# Start all backends using the repository's local environment.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,8 +19,12 @@ if [[ -z "${JWT_PUBLIC_KEY_LOCATION:-}" && -n "${JWT_PUBLIC_KEY_FILE:-}" ]]; the
   export JWT_PUBLIC_KEY_LOCATION="file:${JWT_PUBLIC_KEY_FILE}"
 fi
 
-modules=(core-app location-service)
-ports=("${CORE_SERVER_PORT:-${SERVER_PORT:-8080}}" "${LOCATION_SERVER_PORT:-8081}")
+export CORE_BASE_URL="http://localhost:${CORE_SERVER_PORT:-${SERVER_PORT:-8080}}"
+export CORE_APP_URL="$CORE_BASE_URL"
+export LOCATION_SERVICE_URL="http://localhost:${LOCATION_SERVER_PORT:-8081}"
+
+modules=(core-app location-service api-gateway)
+ports=("${CORE_SERVER_PORT:-${SERVER_PORT:-8080}}" "${LOCATION_SERVER_PORT:-8081}" "${GATEWAY_SERVER_PORT:-8090}")
 for i in "${!modules[@]}"; do
   if command -v lsof >/dev/null 2>&1; then
     listeners="$(lsof -nP -iTCP:"${ports[$i]}" -sTCP:LISTEN 2>/dev/null || true)"
@@ -28,7 +32,7 @@ for i in "${!modules[@]}"; do
       echo "Cannot start ${modules[$i]}: port ${ports[$i]} is already in use." >&2
       echo "$listeners" >&2
       echo "Stop the existing service, then run this script again." >&2
-      echo "Or choose other ports with CORE_SERVER_PORT and LOCATION_SERVER_PORT." >&2
+      echo "Or choose other ports with CORE_SERVER_PORT, LOCATION_SERVER_PORT and GATEWAY_SERVER_PORT." >&2
       exit 1
     fi
   fi
@@ -58,9 +62,9 @@ for i in "${!modules[@]}"; do
   pids+=("$!")
 done
 
-echo "Starting core-app (:${ports[0]}) and location-service (:${ports[1]})."
-echo "Logs: $ROOT/var/log/{core-app,location-service}.log"
-echo "Press Ctrl+C to stop both services."
+echo "Starting core-app (:${ports[0]}), location-service (:${ports[1]}) and gateway (:${ports[2]})."
+echo "Logs: $ROOT/var/log/{core-app,location-service,api-gateway}.log"
+echo "Press Ctrl+C to stop all services."
 
 while true; do
   for i in "${!pids[@]}"; do
@@ -68,7 +72,7 @@ while true; do
     if ! kill -0 "$pid" 2>/dev/null; then
       status=0
       wait "$pid" || status=$?
-      echo "${modules[$i]} exited (status $status); stopping both services." >&2
+      echo "${modules[$i]} exited (status $status); stopping all services." >&2
       tail -n 60 "var/log/${modules[$i]}.log" >&2
       exit "$status"
     fi

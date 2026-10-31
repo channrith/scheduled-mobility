@@ -41,7 +41,7 @@ public class LocationSecurityConfig {
                                 "/actuator/health/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/v1/drivers/me/**")
+                        .requestMatchers("/api/v1/drivers/me/**", "/api/v1/locations")
                         .hasRole("DRIVER")
 
                         .anyRequest()

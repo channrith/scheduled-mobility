@@ -25,6 +25,12 @@ public interface DriverLocationRepository {
 
     Optional<StoredDriverLocation> findLatest(UUID driverId);
 
+    default SaveResult compareAndSave(UUID driverId, UUID userId,
+            UpdateDriverLocationRequest location, Instant receivedAt,
+            Optional<StoredDriverLocation> expectedPrevious) {
+        return compareAndSave(driverId, location, receivedAt, expectedPrevious);
+    }
+
     SaveResult compareAndSave(
             UUID driverId,
             UpdateDriverLocationRequest location,
