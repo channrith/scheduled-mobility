@@ -38,7 +38,7 @@ class JwtDecoderConfigTest {
 
     @Test
     void stagingInlinePemVerifiesCoreTokensAndRejectsWrongIssuer() throws Exception {
-        var decoder = config.jwtDecoder("", pem(" "), resources, "mobility-core");
+        var decoder = config.jwtDecoder("", "", pem(" "), resources, "mobility-core");
         assertThat(decoder.decode(token("mobility-core")).getSubject()).isEqualTo("driver");
         assertThatThrownBy(() -> decoder.decode(token("another-issuer")))
                 .isInstanceOf(JwtValidationException.class);
@@ -49,17 +49,17 @@ class JwtDecoderConfigTest {
         Path file = directory.resolve("public.pem");
         Files.writeString(file, pem("\n"));
         for (String location : new String[] {file.toString(), file.toUri().toString()}) {
-            var decoder = config.jwtDecoder(location, "", resources, "mobility-core");
+            var decoder = config.jwtDecoder("", location, "", resources, "mobility-core");
             assertThat(decoder.decode(token("mobility-core")).getSubject()).isEqualTo("driver");
         }
     }
 
     @Test
     void missingOrAmbiguousKeysFailClearly() {
-        assertThatThrownBy(() -> config.jwtDecoder("", "", resources, "mobility-core"))
+        assertThatThrownBy(() -> config.jwtDecoder("", "", "", resources, "mobility-core"))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("missing");
-        assertThatThrownBy(() -> config.jwtDecoder("file:public.pem", pem("\n"), resources, "mobility-core"))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("not both");
+        assertThatThrownBy(() -> config.jwtDecoder("", "file:public.pem", pem("\n"), resources, "mobility-core"))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("exactly one");
     }
 
     private static String pem(String separator) {

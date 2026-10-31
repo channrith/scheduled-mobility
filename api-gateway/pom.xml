@@ -53,6 +53,10 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!-- spring-boot:run from the repo root, so relative paths in .env resolve there (as in core-app) -->
+					<workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

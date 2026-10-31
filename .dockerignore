@@ -10,3 +10,5 @@
 !location-service/src/main/
 !api-gateway/pom.xml
 !api-gateway/src/main/
+!platform-security/pom.xml
+!platform-security/src/main/

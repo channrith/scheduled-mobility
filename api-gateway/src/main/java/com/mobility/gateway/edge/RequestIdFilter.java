@@ -30,6 +30,8 @@ public class RequestIdFilter implements WebFilter {
 
 	private static final Logger log = LoggerFactory.getLogger(RequestIdFilter.class);
 
+	private static final String HEALTH_PATH = "/actuator/health";
+
 	/** Long enough to be unique, short and plain enough to be safe in logs. */
 	private static final Pattern ACCEPTED = Pattern.compile("[A-Za-z0-9._-]{8,100}");
 
@@ -42,6 +44,11 @@ public class RequestIdFilter implements WebFilter {
 		long started = System.nanoTime();
 		return chain.filter(withId).doFinally(signal -> {
 			HttpStatusCode status = exchange.getResponse().getStatusCode();
+			// Docker's health check calls every 15 s; only a failing one is worth a line.
+			if (status != null && status.is2xxSuccessful()
+					&& exchange.getRequest().getPath().value().startsWith(HEALTH_PATH)) {
+				return;
+			}
 			log.atInfo()
 				.addKeyValue("request.id", id)
 				.addKeyValue("http.method", exchange.getRequest().getMethod().name())

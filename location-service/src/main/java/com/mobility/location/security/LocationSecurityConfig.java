@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import com.mobility.platform.security.MobilityJwt;
 import org.springframework.security.web.SecurityFilterChain;
 import jakarta.servlet.DispatcherType;
 
@@ -14,13 +14,6 @@ public class LocationSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
-
-        // Connect token roles to Spring authentication.
-        var authenticationConverter = new JwtAuthenticationConverter();
-
-        authenticationConverter.setJwtGrantedAuthoritiesConverter(
-                new DriverAuthoritiesConverter()
-        );
 
         http
                 // For an API using bearer headers exclusively.
@@ -52,7 +45,7 @@ public class LocationSecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
                                 .jwtAuthenticationConverter(
-                                        authenticationConverter
+                                        MobilityJwt.authenticationConverter()
                                 )
                         )
                 );

@@ -35,6 +35,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 		</dependency>
+		<!-- Token checks (JWKS, validators, roles) and request IDs in logs; shared with core-app and the gateway. -->
+		<dependency>
+			<groupId>com.mobility</groupId>
+			<artifactId>platform-security</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 		<!-- Latest driver positions live in Redis (read by core-app's dispatch module). -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -72,6 +78,10 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!-- spring-boot:run from the repo root, so relative paths in .env resolve there (as in core-app) -->
+					<workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

@@ -39,6 +39,12 @@ for i in "${!modules[@]}"; do
 done
 
 mkdir -p var/log
+echo "Building shared platform-security library..."
+if ! ./mvnw -B -ntp -pl platform-security -am install -DskipTests > var/log/platform-security-build.log 2>&1; then
+  tail -n 60 var/log/platform-security-build.log >&2
+  exit 1
+fi
+
 # Give each Maven process and its application a process group for clean shutdown.
 set -m
 pids=()

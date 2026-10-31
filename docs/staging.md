@@ -6,11 +6,11 @@ Staging runs everything on one DigitalOcean droplet with Docker Compose (`deploy
 |---|---|
 | Droplet | `mobility-staging-01`, SGP1, Ubuntu 24.04, 1 vCPU / 2 GB, tags `mobility`, `staging` |
 | Reserved IP | `146.190.4.99` |
-| API | https://api.146-190-4-99.sslip.io (Swagger is off: `API_DOCS_ENABLED=false`; use the local profile's http://localhost:8080/swagger-ui.html) |
-| Location service | https://loc.146-190-4-99.sslip.io |
+| API | https://api.146-190-4-99.sslip.io, through `api-gateway` (routes `/api/v1/locations` and `/ws` to location-service, the rest to core-app). Swagger is off: `API_DOCS_ENABLED=false`; use the local profile's http://localhost:8080/swagger-ui.html) |
+| Location service | https://loc.146-190-4-99.sslip.io (direct, bypassing the gateway; kept until the apps send pings to the API host) |
 | Admin console | https://console.146-190-4-99.sslip.io (staff only; same test-data rule) |
 | Firewall | `mobility-staging-fw` (tag `staging`): inbound 22, 80, 443 only |
-| Images | `ghcr.io/channrith/scheduled-mobility/{core-app,location-service,web-console}:<commit SHA>`, built by CI on `main` after the backend and console checks pass |
+| Images | `ghcr.io/channrith/scheduled-mobility/{core-app,location-service,api-gateway,web-console}:<commit SHA>`, built by CI on `main` after the backend and console checks pass |
 | Server directory | `/opt/mobility`, owned by the `deploy` user. `.env` there holds every secret and exists nowhere else |
 
 **Test data only.** Staging sets a fixed OTP code (`OTP_FIXED_CODE`, kept only in the droplet's `.env`;
@@ -117,7 +117,7 @@ The workflow syncs `deploy/staging/` to `/opt/mobility` (never touching `.env` o
 1. Check that `.env` has every value `compose.yml` needs (stops with the missing name, e.g. after a new host
    was added). Then dump the database to `backups/pre-deploy-<UTC time>-<previous tag>.dump` (mode 600, last 5 kept). If the
    dump fails, nothing is changed.
-2. Pull, restart, and wait for core-app, location-service and web-console to be healthy (one 5-minute budget
+2. Pull, restart, and wait for core-app, location-service, api-gateway and web-console to be healthy (one 5-minute budget
    per attempt).
 3. Recreate Caddy or RabbitMQ when their config file (`Caddyfile`, `rabbitmq/20-staging.conf`) changed. A
    single bind-mounted file keeps pointing at the old copy after rsync replaces it, so without this a
@@ -195,8 +195,8 @@ first add the new column and write both, then drop the old one in a later releas
 **Reset all staging data** (database, Redis, RabbitMQ, documents, certificates): `docker compose down -v`,
 then deploy again. On the next start the admin is bootstrapped again. This cannot be undone.
 
-**Memory on 2 GB:** the limits add up to about 2.1 GB on purpose; actual use is about 1 GB, and swap covers
-peaks. The console's 256 MB is sized for uploads: two maximum-size two-sided uploads at once peaked at about
+**Memory on 2 GB:** the limits add up to about 2.4 GB on purpose; actual use is about 1.1 GB (api-gateway ~190 MB
+of its 256 MB), and swap covers peaks. The console's 256 MB is sized for uploads: two maximum-size two-sided uploads at once peaked at about
 200 MB. If containers restart with `Exited (137)` or swap stays busy, resize.
 
 **Resize to 4 GB:** power off, resize in DigitalOcean (CPU and RAM only, so it can be resized back), power
