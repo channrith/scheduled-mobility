@@ -4,7 +4,7 @@
 #
 #   scripts/dev.sh up [--console]   start infrastructure, core-app, location-service, api-gateway (+ console)
 #   scripts/dev.sh status           what is running and healthy
-#   scripts/dev.sh smoke            requests through the gateway; exits 1 if one fails
+#   scripts/dev.sh smoke            the gateway's token check and routes; exits 1 if one fails
 #   scripts/dev.sh down             stop the processes this script started (infrastructure keeps running)
 #   scripts/dev.sh logs <service>   follow a service's log (core-app, location-service, api-gateway, web-console)
 #
@@ -204,21 +204,40 @@ cmd_smoke() {
 	check() { # name, expected, actual
 		if [[ "$2" == "$3" ]]; then say "  ok    $1"; else say "  FAIL  $1: expected $2, got $3"; failed=1; fi
 	}
+	code_of() { printf '%s' "$1" | sed -nE 's/.*"code":"([^"]+)".*/\1/p'; }
+	local GW=http://localhost:8090
 	say "Health:"
 	for service in $SERVICES; do
 		check "$service health" 200 "$(http_code "$(health_url "$service")")"
 	done
-	say "Through the gateway (http://localhost:8090):"
-	headers=$(curl -s -D - -o /dev/null --max-time 5 -H 'X-Request-Id: smoke-test-0001' http://localhost:8090/api/v1/me || true)
-	check "GET /api/v1/me reaches core-app (401 without a token)" 401 "$(printf '%s' "$headers" | awk 'NR==1{print $2}')"
-	check "X-Request-Id comes back" smoke-test-0001 "$(printf '%s' "$headers" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-request-id"{print $2}')"
-	body=$(curl -s --max-time 5 http://localhost:8090/api/v1/me || true)
-	check "core-app's problem+json (code auth.unauthorized)" auth.unauthorized "$(printf '%s' "$body" | sed -nE 's/.*"code":"([^"]+)".*/\1/p')"
-	code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST http://localhost:8090/api/v1/locations -H 'Content-Type: application/json' -d '{}' || true)
-	check "POST /api/v1/locations reaches location-service (401 without a token)" 401 "$code"
-	body=$(curl -s --max-time 5 -H 'Accept-Language: en' http://localhost:8090/nothing-here || true)
-	check "unknown path: the gateway's own 404" gateway.not-found "$(printf '%s' "$body" | sed -nE 's/.*"code":"([^"]+)".*/\1/p')"
-	check "backend actuator not exposed" 404 "$(http_code http://localhost:8090/actuator/env)"
+	say "Token check at the gateway:"
+	headers=$(curl -s -D - -o /dev/null --max-time 5 -H 'X-Request-Id: smoke-test-0001' $GW/api/v1/me | tr -d '\r' || true)
+	check "GET /api/v1/me without a token: 401" 401 "$(printf '%s' "$headers" | awk 'NR==1{print $2}')"
+	check "  with WWW-Authenticate: Bearer" Bearer "$(printf '%s' "$headers" | awk -F': ' 'tolower($1)=="www-authenticate"{print $2}')"
+	check "  and the X-Request-Id back" smoke-test-0001 "$(printf '%s' "$headers" | awk -F': ' 'tolower($1)=="x-request-id"{print $2}')"
+	check "  as problem+json, code auth.unauthorized" auth.unauthorized "$(code_of "$(curl -s --max-time 5 $GW/api/v1/me || true)")"
+	say "Routing:"
+	body=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d '{}' $GW/api/v1/auth/otp/request || true)
+	check "public route reaches core-app (its own 400 'validation')" validation "$(code_of "$body")"
+	check "unknown path: the gateway's own 404" gateway.not-found "$(code_of "$(curl -s --max-time 5 $GW/nothing-here || true)")"
+	check "backend actuator not exposed" 404 "$(http_code $GW/actuator/env)"
+	# With a token (needs OTP_FIXED_CODE in .env; each run signs in a new local test phone).
+	local fixed phone token
+	fixed=$(grep -E '^OTP_FIXED_CODE=' "$ROOT/.env" 2>/dev/null | tail -1 | cut -d= -f2- || true)
+	if [[ -n "$fixed" ]]; then
+		phone="0129$(printf '%05d' $((RANDOM % 100000)))"
+		curl -s -o /dev/null --max-time 5 -X POST -H 'Content-Type: application/json' -d "{\"phone\":\"$phone\"}" $GW/api/v1/auth/otp/request || true
+		token=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d "{\"phone\":\"$phone\",\"code\":\"$fixed\"}" \
+			$GW/api/v1/auth/otp/verify | sed -nE 's/.*"accessToken":"([^"]+)".*/\1/p' || true)
+		say "Signed in (test phone $phone):"
+		check "GET /api/v1/me with the token: core-app answers 200" 200 \
+			"$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Authorization: Bearer $token" $GW/api/v1/me || true)"
+		check "passenger ping reaches location-service (its own 403: drivers only)" 403 \
+			"$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+				-d '{"latitude":11.57,"longitude":104.92}' $GW/api/v1/locations || true)"
+	else
+		say "  skip  checks with a token: set OTP_FIXED_CODE in .env to run them"
+	fi
 	if [[ -n "$(listening 3000)" ]]; then
 		say "Console:"
 		check "GET /login" 200 "$(http_code http://localhost:3000/login)"

@@ -1,1 +1,2 @@
 com.mobility.platform.security.RequestIdAutoConfiguration
+com.mobility.platform.security.MobilityJwtAutoConfiguration

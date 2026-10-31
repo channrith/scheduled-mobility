@@ -48,6 +48,13 @@ spring:
 server:
   port: ${SERVER_PORT:8090}
 
+# Tokens are checked against core-app's public keys from its JWKS (platform-security). Locally core-app runs on
+# 8080, so no setting is needed; staging sets http://core-app:8080/.well-known/jwks.json. The gateway never reads
+# JWT_PUBLIC_KEY*: exporting .env in its terminal changes nothing.
+mobility:
+  jwt:
+    jwks-uri: ${JWT_JWKS_URI:http://localhost:8080/.well-known/jwks.json}
+
 # Only the gateway's own health and info; backends' actuators are never routed.
 management:
   endpoints:

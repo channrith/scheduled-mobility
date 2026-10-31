@@ -128,6 +128,8 @@ services:
       <<: *app-env
       CORE_APP_URL: http://core-app:8080
       LOCATION_SERVICE_URL: http://location-service:8081
+      # Checks tokens with core-app's public keys from its JWKS (internal network only; never routed publicly).
+      JWT_JWKS_URI: http://core-app:8080/.well-known/jwks.json
       JAVA_TOOL_OPTIONS: ${API_GATEWAY_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8090/actuator/health/readiness"]

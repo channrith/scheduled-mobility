@@ -14,15 +14,16 @@ server:
   port: ${SERVER_PORT:8081}
 
 location:
-  # core-app's public keys: its JWKS URL (preferred), or the PEM key (contents or a file path). Exactly one.
-  # Tokens are checked, never issued here.
+  # How long a driver's latest position is kept after their last ping.
+  position-ttl: 24h
+
+# core-app's public keys (platform-security): its JWKS URL (preferred), or the PEM key (contents or a file path).
+# Exactly one. Tokens are checked, never issued here.
+mobility:
   jwt:
     jwks-uri: ${JWT_JWKS_URI:}
     public-key: ${JWT_PUBLIC_KEY:}
     public-key-file: ${JWT_PUBLIC_KEY_FILE:}
-    issuer: mobility-core
-  # How long a driver's latest position is kept after their last ping.
-  position-ttl: 24h
 
 management:
   endpoints:
