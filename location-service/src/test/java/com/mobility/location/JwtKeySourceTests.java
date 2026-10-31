@@ -9,47 +9,60 @@ import com.mobility.platform.security.MobilityJwt;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.sun.net.httpserver.HttpServer;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Where location-service gets core-app's keys: a JWKS URL (staging from phase 2) or a PEM key, exactly one. */
+/** With {@code JWT_JWKS_URI} (staging from phase 2), keys come from core-app's JWKS; platform-security builds the decoder. */
+@org.springframework.context.annotation.Import(LocationTestcontainersConfiguration.class)
+@org.springframework.test.context.ActiveProfiles("local")
+@SpringBootTest
 class JwtKeySourceTests {
 
-	static JwtDecoder decoder(String jwksUri, String publicKey) throws Exception {
-        return new com.mobility.location.security.JwtDecoderConfig().jwtDecoder(jwksUri, "", publicKey,
-                new org.springframework.core.io.DefaultResourceLoader(), MobilityJwt.ISSUER);
-    }
+	static final HttpServer core = jwks();
 
-	@Test
-	void verifiesDriverTokensWithKeysFromCoreAppsJwksUrl() throws Exception {
-		byte[] jwks = new JWKSet(new RSAKey.Builder((RSAPublicKey) TestKeys.PAIR.getPublic()).build()).toString()
-			.getBytes(StandardCharsets.UTF_8);
-		HttpServer core = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-		core.createContext(MobilityJwt.JWKS_PATH, exchange -> {
-			exchange.sendResponseHeaders(200, jwks.length);
-			exchange.getResponseBody().write(jwks);
-			exchange.close();
-		});
-		core.start();
+	static HttpServer jwks() {
 		try {
-			JwtDecoder decoder = decoder("http://127.0.0.1:" + core.getAddress().getPort() + MobilityJwt.JWKS_PATH, null);
-			UUID driver = UUID.randomUUID();
-
-			assertThat(decoder.decode(TestKeys.token(driver, MobilityJwt.ISSUER, "DRIVER")).getSubject()).isEqualTo(driver.toString());
+			byte[] body = new JWKSet(new RSAKey.Builder((RSAPublicKey) TestKeys.PAIR.getPublic()).build()).toString()
+				.getBytes(StandardCharsets.UTF_8);
+			HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+			server.createContext(MobilityJwt.JWKS_PATH, exchange -> {
+				exchange.sendResponseHeaders(200, body.length);
+				exchange.getResponseBody().write(body);
+				exchange.close();
+			});
+			server.start();
+			return server;
 		}
-		finally {
-			core.stop(0);
+		catch (Exception e) {
+			throw new IllegalStateException(e);
 		}
 	}
 
+	@DynamicPropertySource
+	static void jwksUri(DynamicPropertyRegistry registry) {
+		JwtTestSupport.registerEnvironment(registry);
+		registry.add("mobility.jwt.jwks-uri", () -> "http://127.0.0.1:" + core.getAddress().getPort() + MobilityJwt.JWKS_PATH);
+	}
+
+	@AfterAll
+	static void stop() {
+		core.stop(0);
+	}
+
+	@Autowired
+	JwtDecoder decoder;
+
 	@Test
-	void needsExactlyOneKeySource() {
-		assertThatThrownBy(() -> decoder(null, null))
-			.hasMessageContaining("Set exactly one of JWT_JWKS_URI");
-		assertThatThrownBy(() -> decoder("http://core-app:8080/.well-known/jwks.json", TestKeys.publicPem()))
-			.hasMessageContaining("Set exactly one of JWT_JWKS_URI");
+	void verifiesDriverTokensWithKeysFromCoreAppsJwksUrl() {
+		UUID driver = UUID.randomUUID();
+
+		assertThat(decoder.decode(TestKeys.token(driver, MobilityJwt.ISSUER, "DRIVER")).getSubject()).isEqualTo(driver.toString());
 	}
 }

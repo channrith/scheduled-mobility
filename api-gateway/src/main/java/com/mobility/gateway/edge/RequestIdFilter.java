@@ -1,8 +1,6 @@
 package com.mobility.gateway.edge;
 
-import java.util.UUID;
-import java.util.regex.Pattern;
-
+import com.mobility.platform.security.RequestIds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -23,7 +21,7 @@ import reactor.core.publisher.Mono;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter implements WebFilter {
 
-	public static final String HEADER = "X-Request-Id";
+	public static final String HEADER = RequestIds.HEADER;
 
 	/** Exchange attribute holding the request's ID. */
 	public static final String ATTRIBUTE = RequestIdFilter.class.getName() + ".id";
@@ -32,12 +30,9 @@ public class RequestIdFilter implements WebFilter {
 
 	private static final String HEALTH_PATH = "/actuator/health";
 
-	/** Long enough to be unique, short and plain enough to be safe in logs. */
-	private static final Pattern ACCEPTED = Pattern.compile("[A-Za-z0-9._-]{8,100}");
-
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-		String id = accepted(exchange.getRequest().getHeaders().getFirst(HEADER));
+		String id = RequestIds.accept(exchange.getRequest().getHeaders().getFirst(HEADER));
 		exchange.getAttributes().put(ATTRIBUTE, id);
 		exchange.getResponse().getHeaders().set(HEADER, id);
 		ServerWebExchange withId = exchange.mutate().request(r -> r.headers(h -> h.set(HEADER, id))).build();
@@ -50,7 +45,7 @@ public class RequestIdFilter implements WebFilter {
 				return;
 			}
 			log.atInfo()
-				.addKeyValue("request.id", id)
+				.addKeyValue(RequestIds.LOG_KEY, id)
 				.addKeyValue("http.method", exchange.getRequest().getMethod().name())
 				.addKeyValue("url.path", exchange.getRequest().getPath().value())
 				.addKeyValue("http.status", status == null ? 0 : status.value())
@@ -58,10 +53,6 @@ public class RequestIdFilter implements WebFilter {
 				.log("{} {} -> {}", exchange.getRequest().getMethod().name(), exchange.getRequest().getPath().value(),
 						status == null ? "-" : status.value());
 		});
-	}
-
-	static String accepted(String candidate) {
-		return candidate != null && ACCEPTED.matcher(candidate).matches() ? candidate : UUID.randomUUID().toString();
 	}
 
 	/** The request's ID, or null outside a request this filter has seen. */

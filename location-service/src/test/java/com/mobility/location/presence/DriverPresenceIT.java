@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.mobility.location.driver.DriverAccessResolver;
 import com.mobility.location.driver.DriverIdentity;
 import com.mobility.location.logging.RequestLoggingFilter;
-import com.mobility.location.security.JwtDecoderConfig;
 import com.mobility.location.security.LocationSecurityConfig;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -55,8 +54,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Testcontainers
 @SpringBootTest(classes = DriverPresenceIT.Application.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"location.presence.timeout=60s", "location.jwt.issuer=mobility-core",
-                "location.jwt.public-key-location=", "spring.data.redis.password="})
+        properties = {"location.presence.timeout=60s", "mobility.jwt.issuer=mobility-core",
+                "mobility.jwt.public-key-file=", "spring.data.redis.password="})
 class DriverPresenceIT {
 
     static final String PATH = "/api/v1/drivers/me/presence";
@@ -72,13 +71,13 @@ class DriverPresenceIT {
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
-        registry.add("location.jwt.public-key", () -> Base64.getEncoder().encodeToString(KEYS.getPublic().getEncoded()));
+        registry.add("mobility.jwt.public-key", () -> Base64.getEncoder().encodeToString(KEYS.getPublic().getEncoded()));
     }
 
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration
     @Import({DriverPresenceController.class, DriverPresenceService.class, LocationSecurityConfig.class,
-            JwtDecoderConfig.class, RequestLoggingFilter.class})
+            RequestLoggingFilter.class})
     static class Application {
         @Bean
         DriverAccessResolver driverAccessResolver() {

@@ -1,7 +1,7 @@
 package com.mobility.platform.security;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.util.StringUtils;
+import org.springframework.core.io.DefaultResourceLoader;
 
 /**
  * How every service verifies core-app's access tokens: RS256, issuer {@code mobility-core}, 30 s clock skew, and
@@ -120,12 +121,15 @@ public final class MobilityJwt {
 	}
 
 	private static String readFile(String setting, String file) {
-		Path path = Path.of(file.strip()).toAbsolutePath().normalize();
-		try {
-			return Files.readString(path);
-		}
-		catch (IOException ex) {
-			throw new IllegalStateException("Cannot read " + setting + " at " + path, ex);
-		}
+		String location = file.strip();
+        if (!location.contains(":")) {
+            location = "file:" + Path.of(location).toAbsolutePath().normalize();
+        }
+        try (var input = new DefaultResourceLoader().getResource(location).getInputStream()) {
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        catch (IOException ex) {
+            throw new IllegalStateException("Cannot read " + setting + " at " + location, ex);
+        }
 	}
 }

@@ -30,7 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = {
-    "location.core.base-url=http://localhost:1", "location.jwt.public-key-location=",
+    "location.core.base-url=http://localhost:1", "mobility.jwt.public-key-file=",
     "spring.data.redis.password="})
 @AutoConfigureRestTestClient
 @Testcontainers
@@ -42,7 +42,7 @@ class LocationPingIT {
 
 	@DynamicPropertySource
 	static void jwtKey(DynamicPropertyRegistry registry) {
-		registry.add("location.jwt.public-key", TestKeys::publicPem);
+		registry.add("mobility.jwt.public-key", TestKeys::publicPem);
 	}
 
     @MockitoBean

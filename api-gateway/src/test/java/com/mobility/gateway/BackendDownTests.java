@@ -31,8 +31,9 @@ class BackendDownTests {
 
 	@Test
 	void unreachableBackendIsServiceUnavailable() {
-		client.get()
-			.uri("/api/v1/me")
+		// A public route: no token needed to reach the (missing) backend.
+		client.post()
+			.uri("/api/v1/auth/otp/request")
 			.header("Accept-Language", "en")
 			.exchange()
 			.expectStatus()

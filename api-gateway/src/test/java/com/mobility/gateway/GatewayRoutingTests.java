@@ -4,6 +4,7 @@ import java.net.URI;
 import java.time.Duration;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -40,6 +42,7 @@ class GatewayRoutingTests {
 		registry.add("LOCATION_SERVICE_URL", location::url);
 		registry.add("GATEWAY_RESPONSE_TIMEOUT", () -> "1s");
 		registry.add("gateway.edge.max-request-size", () -> "1KB");
+		registry.add("JWT_JWKS_URI", CoreTokens::jwksUri);
 	}
 
 	@AfterAll
@@ -54,18 +57,26 @@ class GatewayRoutingTests {
 	@LocalServerPort
 	int port;
 
+	/** Routing tests use a valid token throughout; the token check itself is in {@link GatewayAuthTests}. */
+	String token;
+
+	@BeforeEach
+	void signedIn() {
+		token = CoreTokens.valid();
+		client = client.mutate().defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token).build();
+	}
+
 	@Test
-	void apiPathsGoToCoreAppWithARequestId() {
+	void apiPathsGoToCoreAppWithARequestIdAndTheTokenUnchanged() {
 		var result = client.get()
 			.uri("/api/v1/quotes/123?x=1")
-			.header("Authorization", "Bearer token-passes-through")
 			.exchange()
 			.expectStatus()
 			.isOk()
 			.expectBody()
 			.jsonPath("$.service").isEqualTo("core-app")
 			.jsonPath("$.path").isEqualTo("/api/v1/quotes/123?x=1")
-			.jsonPath("$.headers.authorization").isEqualTo("Bearer token-passes-through")
+			.jsonPath("$.headers.authorization").isEqualTo("Bearer " + token)
 			.returnResult();
 		String id = result.getResponseHeaders().getFirst("X-Request-Id");
 		assertThat(id).isNotBlank();
@@ -91,11 +102,11 @@ class GatewayRoutingTests {
 	void driverRoutesKeepTheirPathsAndAuthorization() {
         for (String path : new String[] {"/api/v1/drivers/me/location", "/api/v1/drivers/me/presence",
                 "/api/v1/drivers/me/auth-check"}) {
-            client.get().uri(path).header("Authorization", "Bearer forwarded-test-value")
+            client.get().uri(path).header("Authorization", "Bearer " + token)
                 .exchange().expectStatus().isOk().expectBody()
                 .jsonPath("$.service").isEqualTo("location-service")
                 .jsonPath("$.path").isEqualTo(path)
-                .jsonPath("$.headers.authorization").isEqualTo("Bearer forwarded-test-value");
+                .jsonPath("$.headers.authorization").isEqualTo("Bearer " + token);
         }
         for (String path : new String[] {"/api/v1/drivers/me", "/api/v1/drivers/me/availability",
                 "/api/v1/drivers/me/documents", "/api/v1/drivers/me/location-other"}) {
@@ -103,10 +114,10 @@ class GatewayRoutingTests {
                 .jsonPath("$.service").isEqualTo("core-app").jsonPath("$.path").isEqualTo(path);
         }
         client.put().uri("/api/v1/drivers/me/availability").contentType(MediaType.APPLICATION_JSON)
-            .header("Authorization", "Bearer forwarded-test-value").header("Idempotency-Key", "availability-test")
+            .header("Authorization", "Bearer " + token).header("Idempotency-Key", "availability-test")
             .bodyValue("{}").exchange().expectStatus().isOk().expectBody()
             .jsonPath("$.service").isEqualTo("core-app")
-            .jsonPath("$.headers.authorization").isEqualTo("Bearer forwarded-test-value")
+            .jsonPath("$.headers.authorization").isEqualTo("Bearer " + token)
             .jsonPath("$.headers.idempotency-key").isEqualTo("availability-test");
     }
 
@@ -233,8 +244,10 @@ class GatewayRoutingTests {
 	@Test
 	void webSocketsAreProxiedToLocationService() {
 		Sinks.One<String> reply = Sinks.one();
+		HttpHeaders headers = new HttpHeaders();
+		headers.setBearerAuth(token);
 		new ReactorNettyWebSocketClient()
-			.execute(URI.create("ws://localhost:" + port + "/api/v1/drivers/me/location/live"),
+			.execute(URI.create("ws://localhost:" + port + "/api/v1/drivers/me/location/live"), headers,
 					session -> session.send(Mono.just(session.textMessage("ping")))
 						.thenMany(session.receive().map(WebSocketMessage::getPayloadAsText).take(1))
 						.doOnNext(reply::tryEmitValue)
