@@ -80,11 +80,12 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - Write tests with each feature. Integration tests use Testcontainers, not H2.
 
 ## Commands
-- Start infrastructure: `docker compose up -d`
+- Start infrastructure: `docker compose up -d --wait postgres redis rabbitmq` (a plain `up -d` also starts the Dockerised console on :3000)
 - Backend tests: `./mvnw verify`
-- Run backend: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app` (port 8080; secrets and keys come from `.env`)
-- Run location-service: `set -a; source .env; set +a; JWT_PUBLIC_KEY_FILE="$PWD/jwt-public.pem" ./mvnw spring-boot:run -pl location-service`
-  (port 8081; `.env` is not loaded automatically and the key path must be absolute)
+- Run backend: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app -Dspring-boot.run.profiles=local` (port 8080)
+- Run location-service: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl location-service` (port 8081)
+- Spring Boot does not read `.env`: export it in each terminal. `.env` needs `JWT_PRIVATE_KEY_FILE`/`JWT_PUBLIC_KEY_FILE`
+  (shared keys); full local setup in README "Run locally".
 - Run gateway: `./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080, location-service :8081)
 - Web console: `cd web-console && npm run dev`
 
