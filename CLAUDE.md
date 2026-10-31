@@ -82,9 +82,16 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 ## Commands
 - Start infrastructure: `docker compose up -d`
 - Backend tests: `./mvnw verify`
-- Run backend: `./mvnw spring-boot:run -pl core-app`
+- Run backend: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app` (port 8080; secrets and keys come from `.env`)
+- Run location-service: `set -a; source .env; set +a; JWT_PUBLIC_KEY_FILE="$PWD/jwt-public.pem" ./mvnw spring-boot:run -pl location-service`
+  (port 8081; `.env` is not loaded automatically and the key path must be absolute)
 - Run gateway: `./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080, location-service :8081)
 - Web console: `cd web-console && npm run dev`
+
+## Continuing in a new session
+- Read the latest handover first: `docs/handover-gateway.md` (project status, what was built, the next step and
+  any decisions still waiting for me). Older context: `docs/handover-prompt*.md`, `docs/staging.md`.
+- Update that handover (or start a new one) when a step is finished or a plan is waiting for my approval.
 
 ## How I want you to work
 - For each task: **propose a short plan first and wait for my approval** before writing code.

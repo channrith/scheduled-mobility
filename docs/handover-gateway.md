@@ -1,11 +1,28 @@
-# Handover: API gateway, phase 1 (single API host)
+# Handover: API gateway, phase 1 (single API host) — and what comes next
 
-Written 2026-10-30. For a new Claude Code session that needs the gateway's context without the earlier
-conversation. Status: **phase 1 deployed to staging and verified**; this doc ships with its last commit (section 8).
-Read this file and `CLAUDE.md`; earlier context is in `docs/handover-prompt5-booking.md` and the pricing and
-corporate handovers it links to.
+Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
+Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
+**Next: gateway phase 2, planned and waiting for the user's approval** (section 10). Read this file and `CLAUDE.md`;
+earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
+
+## 0. Where the project stands
+
+- Done and on staging: Prompts 0 (skeleton), 1 (identity), 2 (driver), 2.5 (admin console), 3 (corporate +
+  place), 4 (pricing, OSRM), 5 (booking + outbox), 6 (dispatch + location pings), gateway phase 1.
+- Migrations V1–V14 (Prompt 6 added `V13__booking_duration.sql`, `V14__dispatch.sql`).
+- Tests at `abd4720`: core-app 204 unit + 258 integration, location-service 4 + 3, api-gateway 13; console lint,
+  typecheck and build clean; OpenAPI snapshot and `web-console/src/lib/api/schema.ts` in sync.
+- **Prompt 6 (dispatch) has no handover doc of its own.** In short: `core-app/.../dispatch/` (shift blocks,
+  primary + backup assignment with reason codes and confirmation deadlines, greedy suggestions, risk tiers
+  GREEN/AMBER/RED from slack and driver pings, exception queue, all under `/api/v1/dispatch` and
+  `/api/v1/driver/shifts|trips/{id}/confirm|decline`); booking exposes `booking.Trips` to it; location-service
+  takes `POST /api/v1/locations` (DRIVER) into Redis (`driver:location:<userId>`, GEO `driver:positions`).
+  API-only, **no dispatcher console screens yet**. On staging every assigned trip within 90 minutes shows
+  RED / NO_PING because no driver app sends pings yet: expected.
+- Staging: one 2 GB droplet (see `docs/staging.md`). Deploys run from GitHub Actions after CI is green.
+- Known local quirk: Maven integration tests need Docker (Testcontainers).
 
 ## 1. Why a gateway
 
@@ -111,16 +128,61 @@ location-service: `RequestIdFilterTest` each.
 - A flaky core-app test surfaced in CI meanwhile (random test zones overlapping); fixed with `PricingApi.nextSpot()`.
 - On a Mac, Netty's DNS ERROR is harmless but alarming; solved by the macOS profiles.
 
-## 8. Suggested commit (this doc and the last phase-1 changes)
+## 8. How the user works (unchanged)
 
-```
-docs: api-gateway in CLAUDE.md, staging doc and handover; quiet health-check logging
-```
+Plan first and wait for approval; small steps with tests after each; suggest commit messages (the user commits,
+pushes and deploys); ask before new libraries. The user runs droplet and GitHub commands and pastes the output;
+Claude guides and checks it. Don't touch SMS/OTP code or settings. The repo is public: never write secrets or real
+staging values into it. Stop local servers started for testing when done (core-app 8080, location-service 8081,
+gateway 8090, console 3000), or say which are left running. Before `git add .`, check `git status` (both workflow
+files were once deleted from the working tree by accident).
 
 ## 9. Follow-ups
 
-- Phase 2 next (shared `platform-security`, JWT pre-check at the gateway).
+- Gateway phase 2 (section 10), then phases 3 and 4 (section 3).
+- Dispatcher console screens (the other candidate for the next prompt).
+- A dispatch (Prompt 6) handover doc, if more detail than section 0 is needed.
 - Move pings to the API host in the driver app, then drop `LOCATION_HOST`.
 - `web-console/.env.example` is ignored by `web-console/.gitignore` (`.env*`); add `!.env.example` if it should
   be tracked.
 - Consider 4 GB before load testing; the gateway and location-service each sit at ~75% of 256 MB.
+
+## 10. Next: gateway phase 2 (plan proposed 2026-10-31, **not yet approved**)
+
+Wait for the user's answers to the three decisions below before writing code.
+
+**Duplication today:**
+
+| Piece | core-app | location-service |
+|---|---|---|
+| Read the public key (PEM text or file) | `identity/token/JwtConfiguration` | `SecurityConfiguration.publicKey()` |
+| Token checks: RS256, 30 s clock skew, issuer `mobility-core` | `JwtConfiguration.jwtDecoder` | `SecurityConfiguration.jwtDecoder` |
+| `roles` claim → `ROLE_*` authorities | `SecurityConfiguration.jwtAuthenticationConverter` | hand-written copy |
+| Request IDs in logs | `shared/web/RequestIdFilter` | `RequestIdFilter` (copy) |
+
+**Step 1, `platform-security` library module (no behaviour change):** `MobilityJwt` (public-key loading, the
+validators, roles → authorities; servlet `JwtDecoder` for the services and `ReactiveJwtDecoder` for the gateway)
+and `RequestIds` (rules plus the servlet filter). core-app keeps its private key and signing in `identity` (only it
+issues tokens); each service keeps its own route rules. Add the module to `.dockerignore`. Proof: all existing
+core-app and location-service tests pass unchanged, plus unit tests for the module.
+
+**Step 2, JWT check at the gateway** (Spring Security WebFlux): public without a token: `/api/v1/auth/**`,
+`GET /api/v1/document-previews/*`, `/actuator/health/**`, `/actuator/info`, Swagger paths. Everything else needs a
+valid token; missing, expired, wrong key or wrong issuer → 401 at the gateway, never reaching a backend, rendered
+like core-app's (problem+json, code `auth.unauthorized`, `WWW-Authenticate: Bearer`, km/en) so apps and the BFF
+(which refreshes on any 401) see one format. Valid tokens pass through unchanged; services check them again.
+Note: a bearer token that is present but invalid gets 401 even on a public route (same as core-app today).
+
+**Step 3, deploy and docs:** `JWT_PUBLIC_KEY` for `api-gateway` in `deploy/staging/compose.yml` (the droplet `.env`
+already has it); measure memory with Spring Security, raise `API_GATEWAY_MEM_LIMIT` to 288m if it exceeds ~200 MiB;
+CLAUDE.md line for the shared module; a phase 2 section here.
+
+**Commits:** `refactor(security): platform-security module for JWT checks and request IDs; core-app and
+location-service use it` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` ·
+`chore(deploy): gateway JWT key; docs`.
+
+**Decisions waiting for the user** (recommendations first):
+1. Gateway checks only that the token is valid; role rules stay in the services (no drift from `@PreAuthorize`).
+   Edge role rules come with partner routes in phase 4. Alternative: role rules at the edge too.
+2. The gateway's 401 uses core-app's code `auth.unauthorized`. Alternative: `gateway.unauthorized`.
+3. OK to add `platform-security` as a library module (not a deployable, so the deployables rule is unchanged).
