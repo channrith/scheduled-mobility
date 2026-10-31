@@ -74,6 +74,10 @@ class OpenApiConventions implements GlobalOperationCustomizer, GlobalOpenApiCust
 			return;
 		}
 		openApi.getPaths().forEach((path, item) -> item.readOperationsMap().forEach((method, operation) -> {
+			// This operation belongs to location-service and declares its own contract.
+			if (DriverPresenceOpenApi.PATH.equals(path)) {
+				return;
+			}
 			boolean secured = !path.startsWith("/api/v1/auth/");
 			boolean mutating = MUTATING.contains(method);
 			addHeader(operation, acceptLanguage());

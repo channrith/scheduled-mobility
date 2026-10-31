@@ -50,8 +50,9 @@ class OpenApiConfiguration {
 	}
 
 	@Bean
-	GroupedOpenApi allApi() {
-		return GroupedOpenApi.builder().group("all").displayName("All endpoints").pathsToMatch("/api/**").build();
+	GroupedOpenApi allApi(DriverPresenceOpenApi presence) {
+		return GroupedOpenApi.builder().group("all").displayName("All endpoints").pathsToMatch("/api/**")
+			.addOpenApiCustomizer(presence).build();
 	}
 
 	@Bean
@@ -60,11 +61,12 @@ class OpenApiConfiguration {
 	}
 
 	@Bean
-	GroupedOpenApi driverAppApi() {
+	GroupedOpenApi driverAppApi(DriverPresenceOpenApi presence) {
 		return GroupedOpenApi.builder()
 			.group("driver-app")
 			.displayName("Driver app")
 			.pathsToMatch("/api/v1/drivers/me", "/api/v1/drivers/me/**", "/api/v1/me")
+			.addOpenApiCustomizer(presence)
 			.build();
 	}
 

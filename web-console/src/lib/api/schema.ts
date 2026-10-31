@@ -1652,6 +1652,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/drivers/me/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get my driver presence
+         * @description Served by location-service through the API gateway (local: http://localhost:8090).
+         *     Use Swagger through the gateway for Try it out. Requires a registered driver and a DRIVER token;
+         *     all onboarding statuses are allowed. Presence is independent of availability and approval.
+         *     Accepted GPS updates refresh presence; duplicate or old updates and reads do not.
+         *     A missing or expired presence key returns offline with lastSeenAt=null.
+         *
+         *     **Roles:** DRIVER
+         */
+        get: operations["getDriverPresence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/drivers/me/submit": {
         parameters: {
             query?: never;
@@ -2383,6 +2409,21 @@ export interface components {
             trips?: components["schemas"]["LaneTripView"][];
             /** @enum {string} */
             vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
+        };
+        DriverPresenceResponse: {
+            /**
+             * Format: date-time
+             * @description Server receipt time of the last accepted GPS update; null when offline.
+             */
+            lastSeenAt: string | null;
+            /** @description Whether the driver's Redis presence key exists with a valid timestamp. */
+            online: boolean;
+            /**
+             * Format: int64
+             * @description Configured presence timeout in seconds (default 60).
+             * @example 60
+             */
+            timeoutSeconds: number;
         };
         DriverSummary: {
             /** Format: date-time */
@@ -9465,6 +9506,55 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
+            };
+        };
+    };
+    getDriverPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current presence; reading never refreshes the timeout */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriverPresenceResponse"];
+                };
+            };
+            /** @description Missing, invalid or expired token, or invalid token subject */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description DRIVER role required, or core denied driver access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Core returned an incomplete driver profile */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Driver verification unavailable, Redis unavailable, or malformed presence timestamp */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -78,8 +78,9 @@ curl http://localhost:8090/api/v1/drivers/me/presence \
 
 For Postman, use GET `{{location_base_url}}/api/v1/drivers/me/presence` with Bearer Token
 `{{driver_access_token}}`; set `location_base_url` to `http://localhost:8090`. No body or Idempotency-Key
-is needed. This service has no springdoc/OpenAPI snapshot workflow; the core-app snapshot documents
-core-app endpoints only.
+is needed. The core-app Swagger UI documents this location-service endpoint in the **All endpoints**
+and **Driver app** groups, including online/offline examples. Open Swagger through the gateway at
+`http://localhost:8090/swagger-ui.html` to use **Try it out**.
 
 Location-service logs HTTP completion with method, matched route template, status, duration in
 milliseconds, and an `X-Request-Id` also returned in the response. Gateway request IDs are preserved; valid UUID IDs are also accepted directly;
@@ -348,14 +349,15 @@ browser only talks to the console's own server, which holds the tokens in httpOn
 
 ## API documentation
 
-The OpenAPI 3 spec is generated from the controllers (springdoc), so it always matches the code.
+The OpenAPI 3 spec is generated from core-app controllers (springdoc), with an explicit contract
+for the location-service driver presence endpoint exposed through the gateway.
 
 | URL (local profile) | What |
 |---|---|
 | http://localhost:8090/swagger-ui.html | Interactive docs. Click **Authorize** and paste an access token (without `Bearer`) |
 | http://localhost:8090/v3/api-docs/all | Full spec (JSON); also `/auth`, `/driver-app`, `/admin` groups |
 
-Every operation documents its required roles (`x-required-roles`, from `@PreAuthorize`), bearer
+Core-app operations document their required roles (`x-required-roles`, from `@PreAuthorize`), bearer
 security, `Accept-Language`, `Idempotency-Key` (mutating endpoints) and its problem+json errors.
 Endpoint-specific errors are declared with `@ProblemResponse` on the controller method.
 

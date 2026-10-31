@@ -1001,6 +1001,28 @@
         },
         "type" : "object"
       },
+      "DriverPresenceResponse" : {
+        "properties" : {
+          "lastSeenAt" : {
+            "description" : "Server receipt time of the last accepted GPS update; null when offline.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "online" : {
+            "description" : "Whether the driver's Redis presence key exists with a valid timestamp.",
+            "type" : "boolean"
+          },
+          "timeoutSeconds" : {
+            "description" : "Configured presence timeout in seconds (default 60).",
+            "example" : 60,
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "lastSeenAt", "online", "timeoutSeconds" ],
+        "type" : "object"
+      },
       "DriverSummary" : {
         "properties" : {
           "createdAt" : {
@@ -12185,6 +12207,66 @@
         } ],
         "summary" : "Upload a document",
         "tags" : [ "Driver app" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/drivers/me/presence" : {
+      "get" : {
+        "description" : "Served by location-service through the API gateway (local: http://localhost:8090).\nUse Swagger through the gateway for Try it out. Requires a registered driver and a DRIVER token;\nall onboarding statuses are allowed. Presence is independent of availability and approval.\nAccepted GPS updates refresh presence; duplicate or old updates and reads do not.\nA missing or expired presence key returns offline with lastSeenAt=null.\n\n**Roles:** DRIVER",
+        "operationId" : "getDriverPresence",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "offline" : {
+                    "value" : {
+                      "lastSeenAt" : null,
+                      "online" : false,
+                      "timeoutSeconds" : 60
+                    }
+                  },
+                  "online" : {
+                    "value" : {
+                      "lastSeenAt" : "2026-10-31T03:00:00Z",
+                      "online" : true,
+                      "timeoutSeconds" : 60
+                    }
+                  }
+                },
+                "schema" : {
+                  "$ref" : "#/components/schemas/DriverPresenceResponse"
+                }
+              }
+            },
+            "description" : "Current presence; reading never refreshes the timeout",
+            "headers" : {
+              "Cache-Control" : {
+                "schema" : {
+                  "example" : "no-store",
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing, invalid or expired token, or invalid token subject"
+          },
+          "403" : {
+            "description" : "DRIVER role required, or core denied driver access"
+          },
+          "502" : {
+            "description" : "Core returned an incomplete driver profile"
+          },
+          "503" : {
+            "description" : "Driver verification unavailable, Redis unavailable, or malformed presence timestamp"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Get my driver presence",
+        "tags" : [ "Driver presence" ],
         "x-required-roles" : [ "DRIVER" ]
       }
     },

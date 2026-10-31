@@ -40,6 +40,7 @@ class OpenApiIT {
 			.flatMap(info -> info.getPatternValues().stream())
 			.filter(p -> p.startsWith("/api/") && !p.startsWith("/api/v1/test/"))
 			.collect(Collectors.toSet());
+		mapped.add(DriverPresenceOpenApi.PATH); // Gateway endpoint implemented by location-service.
 
 		assertThat(spec.get("paths").propertyNames()).containsExactlyInAnyOrderElementsOf(mapped);
 	}
@@ -109,7 +110,26 @@ class OpenApiIT {
 		assertThat(fetch("/v3/api-docs/auth").get("paths").propertyNames()).allMatch(p -> p.startsWith("/api/v1/auth/"));
 		assertThat(fetch("/v3/api-docs/admin").get("paths").propertyNames()).allMatch(p -> p.startsWith("/api/v1/admin/"));
 		assertThat(fetch("/v3/api-docs/driver-app").get("paths").propertyNames())
-			.contains("/api/v1/drivers/me", "/api/v1/drivers/me/documents", "/api/v1/me");
+			.contains("/api/v1/drivers/me", "/api/v1/drivers/me/documents", "/api/v1/me", DriverPresenceOpenApi.PATH);
+	}
+
+	@Test
+	void documentsLocationServicePresenceInDefaultAndDriverSpecs() {
+		JsonNode presence = operation(DriverPresenceOpenApi.PATH, "get");
+		assertThat(presence.get("security").toString()).contains("bearer-jwt");
+		assertThat(strings(presence.get("x-required-roles"))).containsExactly("DRIVER");
+		assertThat(presence.get("responses").propertyNames()).containsExactlyInAnyOrder("200", "401", "403", "502", "503");
+		assertThat(presence.has("parameters")).isFalse();
+		assertThat(presence.at("/responses/200/headers/Cache-Control/schema/example").asString()).isEqualTo("no-store");
+		JsonNode body = presence.at("/responses/200/content/application~1json");
+		assertThat(body.at("/examples/offline/value/lastSeenAt").isNull()).isTrue();
+		JsonNode schema = resolve(body.get("schema"));
+		assertThat(schema.get("properties").propertyNames()).containsExactlyInAnyOrder("online", "lastSeenAt", "timeoutSeconds");
+		assertThat(strings(schema.at("/properties/lastSeenAt/type"))).containsExactlyInAnyOrder("string", "null");
+		assertThat(fetch("/v3/api-docs").get("paths").has(DriverPresenceOpenApi.PATH)).isTrue();
+		assertThat(fetch("/v3/api-docs/driver-app").get("paths").has(DriverPresenceOpenApi.PATH)).isTrue();
+		assertThat(fetch("/v3/api-docs/auth").get("paths").has(DriverPresenceOpenApi.PATH)).isFalse();
+		assertThat(fetch("/v3/api-docs/admin").get("paths").has(DriverPresenceOpenApi.PATH)).isFalse();
 	}
 
 	@Test
