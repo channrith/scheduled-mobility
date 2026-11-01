@@ -2,8 +2,7 @@
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
 Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Gateway phase 2 done** (section 10; decisions in section 2): steps 1 and 2 on staging (`ec1b294`, `524248e`),
-step 3 built and tested, not yet committed. **Next: phase 3, rate limits** (section 3); plan it first. Read this file and `CLAUDE.md`;
+**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Next: phase 3, rate limits** (section 3); plan it first. Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
@@ -184,7 +183,8 @@ public without a token: `/api/v1/auth/**`, `GET /api/v1/document-previews/*`, `/
 `/actuator/info`, Swagger paths. Everything else needs a valid token, else 401 like core-app's. Valid tokens pass
 through unchanged. A bearer token that is present but invalid gets 401 even on a public route (as in core-app).
 
-**Step 3, deploy and docs. Built and tested, not yet committed:** location-service defaults to core-app's JWKS
+**Step 3, deploy and docs. Done, `5c4c791`, verified on staging 2026-11-01** (a passenger's ping got location-service's
+own 403 through the gateway and through the direct `loc.` host, so it verifies tokens with core-app's JWKS): location-service defaults to core-app's JWKS
 (`JWT_JWKS_URI`, default `http://localhost:8080/.well-known/jwks.json`) and no longer reads the PEM variables, so
 exporting `.env` cannot conflict; JWT key files are optional locally (core-app's throwaway key works for everyone);
 `scripts/dev.sh` no longer requires them. Verified locally: a token signed by a throwaway key passes the gateway and
