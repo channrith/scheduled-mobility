@@ -34,6 +34,7 @@ public class LocationSecurityConfig {
                                 "/actuator/health/**"
                         ).permitAll()
 
+                        .requestMatchers("/api/v1/passenger/trips/*/location/live").hasRole("PASSENGER")
                         .requestMatchers("/api/v1/drivers/me/**", "/api/v1/locations")
                         .hasRole("DRIVER")
 

@@ -101,7 +101,7 @@ class GatewayRoutingTests {
 	@Test
 	void driverRoutesKeepTheirPathsAndAuthorization() {
         for (String path : new String[] {"/api/v1/drivers/me/location", "/api/v1/drivers/me/presence",
-                "/api/v1/drivers/me/auth-check"}) {
+                "/api/v1/drivers/me/auth-check", "/api/v1/passenger/trips/fixture/location/live"}) {
             client.get().uri(path).header("Authorization", "Bearer " + token)
                 .exchange().expectStatus().isOk().expectBody()
                 .jsonPath("$.service").isEqualTo("location-service")
@@ -109,7 +109,7 @@ class GatewayRoutingTests {
                 .jsonPath("$.headers.authorization").isEqualTo("Bearer " + token);
         }
         for (String path : new String[] {"/api/v1/drivers/me", "/api/v1/drivers/me/availability",
-                "/api/v1/drivers/me/documents", "/api/v1/drivers/me/location-other"}) {
+                "/api/v1/drivers/me/documents", "/api/v1/drivers/me/location-other", "/api/v1/passenger/trips/fixture/tracking-access"}) {
             client.get().uri(path).exchange().expectStatus().isOk().expectBody()
                 .jsonPath("$.service").isEqualTo("core-app").jsonPath("$.path").isEqualTo(path);
         }

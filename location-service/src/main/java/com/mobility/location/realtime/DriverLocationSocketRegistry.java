@@ -196,6 +196,17 @@ public class DriverLocationSocketRegistry {
                 return;
             }
 
+            if (connection.passenger && (recordedAt.isBefore(Instant.now().minusSeconds(30)) || recordedAt.isAfter(Instant.now().plusSeconds(2)))) return;
+            try {
+                if (!connection.authorized.getAsBoolean()) {
+                    removeAndClose(driverId, connection, new CloseStatus(1008, "Tracking access ended"));
+                    return;
+                }
+            } catch (RuntimeException denied) {
+                removeAndClose(driverId, connection, new CloseStatus(1008, "Tracking access ended"));
+                return;
+            }
+
             // Keep snapshots and live updates in timestamp order.
             if (connection.lastSentAt != null
                     && !recordedAt.isAfter(connection.lastSentAt)) {
@@ -296,6 +307,8 @@ public class DriverLocationSocketRegistry {
         private final WebSocketSession session;
         private final Instant expiresAt;
         private Instant lastSentAt;
+        private final java.util.function.BooleanSupplier authorized;
+        private final boolean passenger;
 
         private DriverConnection(
                 WebSocketSession session,
@@ -308,6 +321,9 @@ public class DriverLocationSocketRegistry {
             );
 
             this.expiresAt = expiresAt;
+            Object guard = session.getAttributes().get(PassengerLocationHandshakeInterceptor.DELIVERY_AUTHORIZATION);
+            this.passenger = guard instanceof java.util.function.BooleanSupplier;
+            this.authorized = guard instanceof java.util.function.BooleanSupplier supplier ? supplier : () -> true;
         }
     }
 }

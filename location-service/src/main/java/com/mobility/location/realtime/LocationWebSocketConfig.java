@@ -11,13 +11,16 @@ public class LocationWebSocketConfig implements WebSocketConfigurer {
 
     private final DriverLocationWebSocketHandler handler;
     private final DriverLocationHandshakeInterceptor interceptor;
+    private final PassengerLocationHandshakeInterceptor passengerInterceptor;
 
     public LocationWebSocketConfig(
             DriverLocationWebSocketHandler handler,
-            DriverLocationHandshakeInterceptor interceptor
+            DriverLocationHandshakeInterceptor interceptor,
+            PassengerLocationHandshakeInterceptor passengerInterceptor
     ) {
         this.handler = handler;
         this.interceptor = interceptor;
+        this.passengerInterceptor = passengerInterceptor;
     }
 
     @Override
@@ -28,5 +31,6 @@ public class LocationWebSocketConfig implements WebSocketConfigurer {
                 handler,
                 "/api/v1/drivers/me/location/live"
         ).addInterceptors(interceptor);
+        registry.addHandler(handler, "/api/v1/passenger/trips/{tripId}/location/live").addInterceptors(passengerInterceptor);
     }
 }

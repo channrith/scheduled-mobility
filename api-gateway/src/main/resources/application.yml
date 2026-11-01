@@ -33,7 +33,7 @@ spring:
               uri: ${LOCATION_SERVICE_URL:http://localhost:8081}
               order: 0
               predicates:
-                - Path=/api/v1/locations,/api/v1/drivers/me/location,/api/v1/drivers/me/location/live,/api/v1/drivers/me/presence,/api/v1/drivers/me/auth-check
+                - Path=/api/v1/passenger/trips/*/location/live,/api/v1/locations,/api/v1/drivers/me/location,/api/v1/drivers/me/location/live,/api/v1/drivers/me/presence,/api/v1/drivers/me/auth-check
             - id: core-app
               uri: ${CORE_APP_URL:http://localhost:8080}
               order: 1

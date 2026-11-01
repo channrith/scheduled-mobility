@@ -35,6 +35,29 @@ class DriverLocationSocketRegistryTest {
         }
     }
 
+    @Test
+    void revokedPassengerAccessClosesWithoutSendingLocation() throws Exception {
+        var executor = new ThreadPoolTaskExecutor(); executor.initialize();
+        try {
+            var registry = new DriverLocationSocketRegistry(JsonMapper.builder().build(), executor);
+            UUID driver = UUID.randomUUID();
+            WebSocketSession passenger = session("passenger");
+            var allowed = new java.util.concurrent.atomic.AtomicBoolean(true);
+            when(passenger.getAttributes()).thenReturn(Map.of(
+                DriverLocationHandshakeInterceptor.TOKEN_EXPIRES_AT, Instant.now().plusSeconds(60),
+                PassengerLocationHandshakeInterceptor.DELIVERY_AUTHORIZATION, (java.util.function.BooleanSupplier) allowed::get));
+            registry.register(driver, passenger);
+            Instant now = Instant.now();
+            registry.sendToDriver(new DriverLocationEvent(1, "driver.location.updated", UUID.randomUUID(), driver, 11.5, 104.9, 10.0, now, now));
+            verify(passenger, timeout(2000)).sendMessage(any());
+            clearInvocations(passenger); allowed.set(false);
+            registry.sendToDriver(new DriverLocationEvent(1, "driver.location.updated", UUID.randomUUID(), driver, 11.6, 104.9, 10.0, now.plusSeconds(1), now.plusSeconds(1)));
+            verify(passenger, timeout(2000)).close(argThat(status -> status.getCode() == 1008));
+            verify(passenger, never()).sendMessage(any());
+            org.junit.jupiter.api.Assertions.assertEquals(0, registry.connectionCount(driver));
+        } finally { executor.shutdown(); }
+    }
+
     private WebSocketSession session(String id) {
         WebSocketSession session = mock(WebSocketSession.class);
         when(session.getId()).thenReturn(id);
