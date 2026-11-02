@@ -101,12 +101,14 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      # Checks core-app's access tokens (driver pings) with its public keys from its JWKS; never signs any.
+      JWT_JWKS_URI: http://core-app:8080/.well-known/jwks.json
+      # Latest driver positions, read by core-app's dispatch.
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}
       CORE_BASE_URL: http://core-app:8080
       LOCATION_EVENTS_CHANNEL: ${LOCATION_EVENTS_CHANNEL:-mobility:staging:driver-location:v1}
       LOCATION_PRESENCE_TIMEOUT: ${LOCATION_PRESENCE_TIMEOUT:-60s}
-      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
       JWT_ISSUER: ${JWT_ISSUER:-mobility-core}
       JAVA_TOOL_OPTIONS: ${LOCATION_SERVICE_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
     depends_on:

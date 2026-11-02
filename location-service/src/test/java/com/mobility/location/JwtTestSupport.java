@@ -8,6 +8,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 final class JwtTestSupport {
 
     static void register(DynamicPropertyRegistry registry) {
+        registry.add("mobility.jwt.jwks-uri", () -> "");
         registry.add("mobility.jwt.public-key", JwtTestSupport::publicKey);
         registry.add("JWT_PUBLIC_KEY_LOCATION", () -> "");
         registerEnvironment(registry);

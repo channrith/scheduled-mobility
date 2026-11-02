@@ -72,8 +72,9 @@ check_env() {
 	for key in JWT_PRIVATE_KEY_FILE JWT_PUBLIC_KEY_FILE; do
 		local value
 		value=$(grep -E "^$key=" "$ROOT/.env" | tail -1 | cut -d= -f2- || true)
-		[[ -n "$value" ]] || fail "$key is empty in .env; location-service cannot check core-app's tokens without shared keys (README, Run locally, step 3)"
-		[[ -f "$ROOT/${value#./}" || -f "$value" ]] || fail "$key points to $value, which does not exist (generate the keys: README, Run locally, step 2)"
+		# Optional: without key files core-app generates a throwaway pair, and the other services fetch it from its JWKS.
+		[[ -z "$value" || -f "$ROOT/${value#./}" || -f "$value" ]] \
+			|| fail "$key points to $value, which does not exist: generate the keys or empty the setting (README, Run locally)"
 	done
 }
 

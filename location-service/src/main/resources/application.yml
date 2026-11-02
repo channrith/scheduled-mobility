@@ -36,12 +36,10 @@ logging:
 server:
   port: ${SERVER_PORT:8081}
 
-# Shared JWT validation; configure exactly one public key source.
+# Verify tokens with core-app's public JWKS; PEM environment variables belong to core-app.
 mobility:
   jwt:
-    jwks-uri: ${JWT_JWKS_URI:}
-    public-key: ${JWT_PUBLIC_KEY:}
-    public-key-file: ${JWT_PUBLIC_KEY_LOCATION:${JWT_PUBLIC_KEY_FILE:}}
+    jwks-uri: ${JWT_JWKS_URI:http://localhost:8080/.well-known/jwks.json}
     issuer: ${JWT_ISSUER:mobility-core}
 
 management:

@@ -88,8 +88,9 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - Backend tests: `./mvnw verify`
 - Run backend: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app -Dspring-boot.run.profiles=local` (port 8080)
 - Run location-service: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl location-service` (port 8081)
-- Spring Boot does not read `.env`: export it in each terminal. `.env` needs `JWT_PRIVATE_KEY_FILE`/`JWT_PUBLIC_KEY_FILE`
-  (shared keys); full local setup in README "Run locally".
+- Spring Boot does not read `.env`: export it in each terminal (location-service needs it for Redis). JWT key files
+  are optional locally: location-service and the gateway fetch core-app's keys from its JWKS on :8080, so core-app
+  must be running. Full local setup in README "Run locally".
 - Run gateway: `./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080, location-service :8081)
 - Web console: `cd web-console && npm run dev`
 - Whole local stack: `scripts/dev.sh up [--console]` · `smoke` · `status` · `logs <service>` · `down` (stops only what it started)

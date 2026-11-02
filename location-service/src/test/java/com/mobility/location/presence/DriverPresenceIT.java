@@ -55,7 +55,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(classes = DriverPresenceIT.Application.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"location.presence.timeout=60s", "mobility.jwt.issuer=mobility-core",
-                "mobility.jwt.public-key-file=", "spring.data.redis.password="})
+                "mobility.jwt.jwks-uri=", "mobility.jwt.public-key-file=", "spring.data.redis.password="})
 class DriverPresenceIT {
 
     static final String PATH = "/api/v1/drivers/me/presence";
