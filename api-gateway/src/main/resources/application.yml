@@ -45,8 +45,70 @@ spring:
               predicates:
                 - Path=/v3/api-docs,/v3/api-docs/**,/swagger-ui.html,/swagger-ui/**
 
+  # Rate-limit buckets (phase 3). Short timeouts: when Redis is slow or down, requests go through unlimited.
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 500ms
+      timeout: 200ms
+
 server:
   port: ${SERVER_PORT:8090}
+
+# Edge rate limits: a token bucket per policy and caller in Redis. The first policy whose paths (and method, if set)
+# match a request decides; a request no policy matches is not limited (health, unrouted 404s). Over the limit: 429
+# problem+json `gateway.rate-limited` with Retry-After. Business limits stay in the services (identity's per-phone
+# OTP limits). Keys: IP = the client's address (X-Forwarded-For from a trusted proxy), USER = the token's subject.
+# Requests without a valid token on protected routes are answered 401 before this point.
+gateway:
+  rate-limits:
+    enabled: ${GATEWAY_RATE_LIMITS_ENABLED:true}
+    policies:
+      # Sign-in by IP. Generous: an office or bank behind one NAT address signs in together at 9:00.
+      - id: auth
+        paths: [/api/v1/auth/**]
+        key: ip
+        burst: 30
+        rate: 30
+        period: 1m
+      # Each quote calls OSRM.
+      - id: quotes
+        method: POST
+        paths: [/api/v1/quotes]
+        key: user
+        burst: 20
+        rate: 30
+        period: 1m
+      # The driver app pings about every 4 s on a trip; room for catching up after a dead zone.
+      - id: pings
+        method: POST
+        paths: [/api/v1/locations]
+        key: user
+        burst: 10
+        rate: 1
+        period: 1s
+      # WebSocket connection attempts (reconnect loops).
+      - id: ws-connect
+        paths: [/ws/**]
+        key: user
+        burst: 10
+        rate: 10
+        period: 1m
+      # Reachable without a token.
+      - id: public
+        paths: [/api/v1/document-previews/**, /v3/api-docs, /v3/api-docs/**, /swagger-ui.html, /swagger-ui/**]
+        key: ip
+        burst: 60
+        rate: 60
+        period: 1m
+      - id: default
+        paths: [/api/**]
+        key: user
+        burst: 60
+        rate: 10
+        period: 1s
 
 # Tokens are checked against core-app's public keys from its JWKS (platform-security). Locally core-app runs on
 # 8080, so no setting is needed; staging sets http://core-app:8080/.well-known/jwks.json. The gateway never reads
@@ -61,6 +123,10 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    # Rate limits fail open, so a Redis outage must not mark the gateway (and with it the whole API) unhealthy.
+    redis:
+      enabled: false
 
 logging:
   level:

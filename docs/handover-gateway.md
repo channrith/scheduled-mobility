@@ -2,7 +2,7 @@
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
 Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Next: phase 3, rate limits** (section 3); plan it first. Read this file and `CLAUDE.md`;
+**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) built and tested, waiting for the user's commit; next step 2 (BFF forwards the client IP). Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
@@ -198,3 +198,66 @@ update this handover.
 **Commits:** `refactor(security): platform-security module (JWKS, token checks, request IDs); core-app serves its
 JWKS` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` · `chore(deploy): JWKS URL
 for gateway and location-service; docs`.
+
+## 11. Gateway phase 3: rate limits (approved 2026-11-08; step 1 built, not committed)
+
+**Findings that shape it:**
+- The console's BFF calls the gateway without `X-Forwarded-For` (`web-console/src/app/api/core/[...path]/route.ts`,
+  `api/auth/*`, `lib/server/session.ts`), so today every console user looks like the web-console container's IP. Any
+  per-IP limit would put all console sign-ins in one bucket. Caddy already sets the header for the browser→console hop.
+- The gateway has no Redis connection yet; staging Redis is `noeviction`, 64 MB, password-protected.
+- Spring Cloud Gateway's built-in `RequestRateLimiter` answers 429 with an empty body and no `Retry-After`, keys by
+  route only, and its integer per-second rates can't say "10 per minute" without tricks.
+- `LOCATION_HOST` (`loc.`) still reaches location-service directly, so ping limits apply only through the API host
+  until that block is removed.
+
+**Approach:** one `RateLimitFilter` (WebFlux `WebFilter`, after Spring Security so it can see the token's `sub`)
+picks the first matching policy from `gateway.rate-limits.*` in `application.yml`, builds the key, and runs a small
+token-bucket Lua script in Redis (one atomic call per request; keys `rl:<policy>:<key>` with a TTL). When a request
+is over the limit: 429 problem+json `gateway.rate-limited` (km/en) with `Retry-After` (whole seconds until the next
+token), written by `EdgeProblems`. Allowed requests pass through unchanged. **Fails open:** if Redis is down or slow
+(over 100 ms) the request goes through with a WARN log. Redis is left out of readiness, so a Redis outage can't take
+the API down.
+
+**Keys:** *user* = the JWT `sub` (only valid tokens get this far). *IP* = the first `X-Forwarded-For` entry when the
+caller is a trusted proxy (same `trusted-proxies` pattern), else the remote address.
+
+**Starting policies** (all configurable; first match wins):
+
+| Policy | Matches | Key | Limit (burst / refill) |
+|---|---|---|---|
+| auth | `/api/v1/auth/**` | IP | 30 burst, 30/min (offices share one NAT IP; identity's per-phone OTP limits stay) |
+| quotes | `POST /api/v1/quotes` | user | 20 burst, 30/min (each quote calls OSRM) |
+| pings | `POST /api/v1/locations` | user | 10 burst, 1/s (app sends every ~4 s) |
+| ws-connect | `/ws/**` | user | 10 burst, 10/min (connection attempts) |
+| public | other routes reachable without a token (document previews, API docs) | IP | 60 burst, 60/min |
+| default | any other `/api/**` | user | 60 burst, 10/s |
+| partners | phase 4 (`/partner/v1/**`, by client plan) | client | not now |
+
+Gateway health and unrouted 404s aren't limited.
+
+**Steps:**
+1. *Gateway limiter.* `spring-boot-starter-data-redis-reactive` (new dependency: the reactive Redis client the
+   gateway needs; nothing new in the stack), `RateLimitProperties`, the Lua script, `RateLimitFilter`, the
+   `gateway.rate-limited` messages plus `error.title.429`. Tests use Testcontainers Redis: per-IP and per-user
+   buckets, `Retry-After`, refill, first-match order, IP taken from `X-Forwarded-For` only from trusted proxies,
+   fail-open with Redis stopped. Existing tests run with limits off or high.
+   **Built (2026-11-08):** `api-gateway/.../ratelimit/` (`RateLimitProperties`, `TokenBuckets` +
+   `resources/ratelimit/token_bucket.lua`, `ClientIp`, `RateLimitFilter` at order 0, after Security's -100), policies
+   in `application.yml` (`GATEWAY_RATE_LIMITS_ENABLED`), Redis `REDIS_HOST/PORT/PASSWORD` with 500 ms connect / 200 ms
+   command timeouts, `management.health.redis.enabled: false`. Tests: `RateLimitIT` (Testcontainers Redis, the
+   shipped policies), `RateLimitRedisDownTests` (fail open, still healthy), `ClientIpTest`; the older gateway tests
+   run with limits off. Bucket key: `rl:<policy>:ip:<addr>` or `rl:<policy>:user:<sub>`.
+2. *BFF forwards the client IP.* The BFF passes the incoming `X-Forwarded-For` (set by Caddy) on every call to the
+   gateway (proxy, OTP request/verify, refresh, logout); locally it falls back to nothing. Core-app and
+   location-service then also see the real client IP from the console.
+3. *Deploy and docs.* Staging Compose: `REDIS_HOST`/`REDIS_PASSWORD` for the gateway, `depends_on` Redis; measure
+   gateway memory (raise to 288m if over ~220 MiB); `scripts/dev.sh smoke` checks one 429; README, CLAUDE.md, this
+   handover. Verify on staging: 31 quick `otp/request` calls from one IP → 429 with `Retry-After`; console sign-in
+   still works.
+
+**Commits:** `feat(gateway): Redis token-bucket rate limits with 429 problem+json` ·
+`fix(console): forward the client IP to the gateway` · `chore(deploy): Redis for the gateway; rate-limit docs`.
+
+**Open questions for the user:** the numbers above; fail-open vs fail-closed; whether auth needs a second, tighter
+key (per phone number) at the edge (I'd say no: identity already does that).

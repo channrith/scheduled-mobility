@@ -86,6 +86,8 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 ## Commands
 - Start infrastructure: `docker compose up -d --wait postgres redis rabbitmq` (a plain `up -d` also starts the Dockerised console on :3000)
 - Backend tests: `./mvnw verify`
+- Before any `spring-boot:run -pl <service>`: `./mvnw install -pl platform-security -am -DskipTests` (once, and after
+  changing platform-security or the root `pom.xml`); `-pl` takes the library and parent POM from `~/.m2`. `dev.sh up` does it.
 - Run backend: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app -Dspring-boot.run.profiles=local` (port 8080)
 - Run location-service: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl location-service` (port 8081)
 - Spring Boot does not read `.env`: export it in each terminal (location-service needs it for Redis). JWT key files

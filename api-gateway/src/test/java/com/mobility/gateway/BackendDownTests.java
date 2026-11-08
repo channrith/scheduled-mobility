@@ -24,6 +24,8 @@ class BackendDownTests {
 			closed = socket.getLocalPort();
 		}
 		registry.add("CORE_APP_URL", () -> "http://127.0.0.1:" + closed);
+		// Rate limits have their own tests (RateLimitIT); here they would only depend on whether Redis runs.
+		registry.add("gateway.rate-limits.enabled", () -> "false");
 	}
 
 	@Autowired

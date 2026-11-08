@@ -30,6 +30,8 @@ class GatewayAuthTests {
 		registry.add("CORE_APP_URL", core::url);
 		registry.add("LOCATION_SERVICE_URL", location::url);
 		registry.add("JWT_JWKS_URI", CoreTokens::jwksUri);
+		// Rate limits have their own tests (RateLimitIT); here they would only depend on whether Redis runs.
+		registry.add("gateway.rate-limits.enabled", () -> "false");
 	}
 
 	@AfterAll

@@ -143,6 +143,12 @@ cmd_up() {
 	if $with_console && [[ -n "$(docker ps -q -f name=mobility-web-console 2>/dev/null)" ]]; then
 		fail "the Dockerised console holds port 3000: docker compose stop web-console"
 	fi
+	# `spring-boot:run -pl <service>` builds only that service and takes platform-security (and the parent POM)
+	# from ~/.m2, so install them first; every run, so library changes are picked up.
+	say "Installing platform-security (shared library) into ~/.m2:"
+	(cd "$ROOT" && ./mvnw -B -ntp -q install -pl platform-security -am -DskipTests) >"$STATE/install.log" 2>&1 \
+		|| { tail -20 "$STATE/install.log"; fail "installing platform-security failed (log: var/dev/install.log)"; }
+	say "  done"
 	say "Starting:"
 	local service all="$SERVICES"
 	$with_console && all="$all web-console"

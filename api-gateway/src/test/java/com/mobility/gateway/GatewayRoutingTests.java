@@ -43,6 +43,8 @@ class GatewayRoutingTests {
 		registry.add("GATEWAY_RESPONSE_TIMEOUT", () -> "1s");
 		registry.add("gateway.edge.max-request-size", () -> "1KB");
 		registry.add("JWT_JWKS_URI", CoreTokens::jwksUri);
+		// Rate limits have their own tests (RateLimitIT); here they would only depend on whether Redis runs.
+		registry.add("gateway.rate-limits.enabled", () -> "false");
 	}
 
 	@AfterAll

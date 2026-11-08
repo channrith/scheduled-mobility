@@ -76,6 +76,10 @@ Then one terminal per process, from the repo root. Spring Boot does not read `.e
 exports it first (`spring-boot:run` runs from the repo root, so the `./jwt-*.pem` paths resolve there):
 
 ```bash
+# Once, and again after changing platform-security or the root pom.xml: `-pl <service>` builds only that service
+# and takes the shared library and its parent POM from ~/.m2 (else "Could not find artifact ...platform-security").
+./mvnw install -pl platform-security -am -DskipTests
+
 # Terminal 1: core-app (Flyway migrates the database on startup)
 set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app -Dspring-boot.run.profiles=local
 
