@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { LOCALE_COOKIE, toLocale } from "@/i18n/locales";
-import { CORE_API_URL } from "@/lib/server/session";
+import { CORE_API_URL, clientIpHeaders } from "@/lib/server/session";
 
 export async function POST(request: NextRequest) {
   const upstream = await fetch(`${CORE_API_URL}/api/v1/auth/otp/request`, {
@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "content-type": "application/json",
       "accept-language": toLocale(request.cookies.get(LOCALE_COOKIE)?.value),
+      ...clientIpHeaders(request),
     },
     body: await request.text(),
     cache: "no-store",

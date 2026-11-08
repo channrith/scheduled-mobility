@@ -2,7 +2,7 @@
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
 Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) built and tested, waiting for the user's commit; next step 2 (BFF forwards the client IP). Read this file and `CLAUDE.md`;
+**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) committed `f97ff53` and verified locally by hand; step 2 (BFF forwards the client IP) built, not committed; then step 3 (deploy and docs). Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
@@ -199,7 +199,7 @@ update this handover.
 JWKS` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` · `chore(deploy): JWKS URL
 for gateway and location-service; docs`.
 
-## 11. Gateway phase 3: rate limits (approved 2026-11-08; step 1 built, not committed)
+## 11. Gateway phase 3: rate limits (approved 2026-11-08; step 1 committed `f97ff53`)
 
 **Findings that shape it:**
 - The console's BFF calls the gateway without `X-Forwarded-For` (`web-console/src/app/api/core/[...path]/route.ts`,
@@ -242,7 +242,7 @@ Gateway health and unrouted 404s aren't limited.
    `gateway.rate-limited` messages plus `error.title.429`. Tests use Testcontainers Redis: per-IP and per-user
    buckets, `Retry-After`, refill, first-match order, IP taken from `X-Forwarded-For` only from trusted proxies,
    fail-open with Redis stopped. Existing tests run with limits off or high.
-   **Built (2026-11-08):** `api-gateway/.../ratelimit/` (`RateLimitProperties`, `TokenBuckets` +
+   **Done, `f97ff53` (2026-11-08); checked by hand locally (burst, Retry-After, per-IP buckets, fail-open):** `api-gateway/.../ratelimit/` (`RateLimitProperties`, `TokenBuckets` +
    `resources/ratelimit/token_bucket.lua`, `ClientIp`, `RateLimitFilter` at order 0, after Security's -100), policies
    in `application.yml` (`GATEWAY_RATE_LIMITS_ENABLED`), Redis `REDIS_HOST/PORT/PASSWORD` with 500 ms connect / 200 ms
    command timeouts, `management.health.redis.enabled: false`. Tests: `RateLimitIT` (Testcontainers Redis, the
@@ -251,6 +251,12 @@ Gateway health and unrouted 404s aren't limited.
 2. *BFF forwards the client IP.* The BFF passes the incoming `X-Forwarded-For` (set by Caddy) on every call to the
    gateway (proxy, OTP request/verify, refresh, logout); locally it falls back to nothing. Core-app and
    location-service then also see the real client IP from the console.
+   **Built (2026-11-08), not committed:** `clientIpHeaders()` in `web-console/src/lib/server/session.ts` passes the
+   first `X-Forwarded-For` entry on every BFF call (`api/core/[...path]`, `api/auth/otp/request|verify`,
+   `api/auth/logout`, `refreshTokens()`); no header locally means nothing is sent. The console shows the gateway's
+   localized `detail`, so no new strings. On staging the console is reachable only through Caddy (no published port),
+   so the header can't be spoofed there; locally (`docker compose` publishes :3000) it can, which doesn't matter.
+   Console checks need Node >= 20.9 (`nvm use 22`); this Mac's default shell Node is v14.
 3. *Deploy and docs.* Staging Compose: `REDIS_HOST`/`REDIS_PASSWORD` for the gateway, `depends_on` Redis; measure
    gateway memory (raise to 288m if over ~220 MiB); `scripts/dev.sh smoke` checks one 429; README, CLAUDE.md, this
    handover. Verify on staging: 31 quick `otp/request` calls from one IP → 429 with `Retry-After`; console sign-in

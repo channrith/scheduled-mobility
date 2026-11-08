@@ -5,6 +5,17 @@ import type { NextResponse } from "next/server";
 /** Base URL of core-app, reached from the Next.js server only. */
 export const CORE_API_URL = (process.env.CORE_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
+/**
+ * Passes the browser's address on to the API gateway, which limits sign-in attempts per client IP. Without it every
+ * console user would look like the console's own container and share one limit. On staging the console is reachable
+ * only through Caddy, which sets X-Forwarded-For itself (ignoring any value the browser sent); only its first entry,
+ * the client, is passed on. No header (local `npm run dev`) means nothing is forwarded.
+ */
+export function clientIpHeaders(request: Request): Record<string, string> {
+  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return client ? { "x-forwarded-for": client } : {};
+}
+
 const secure = process.env.NODE_ENV === "production" && process.env.COOKIE_INSECURE !== "true";
 
 /** Access and refresh tokens: httpOnly, only sent to the console's own /api routes. */
@@ -46,12 +57,15 @@ export function clearSessionCookies(response: NextResponse) {
  * send the same Idempotency-Key (derived from the refresh token), so core-app performs one rotation and
  * replays its result to the others instead of treating them as token reuse (theft).
  */
-export async function refreshTokens(refreshToken: string): Promise<TokenResponse | null> {
+export async function refreshTokens(
+  refreshToken: string,
+  clientIp: Record<string, string> = {},
+): Promise<TokenResponse | null> {
   const key = "refresh-" + createHash("sha256").update(refreshToken).digest("hex").slice(0, 40);
   for (let attempt = 0; attempt < 6; attempt++) {
     const response = await fetch(`${CORE_API_URL}/api/v1/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": key, ...clientIp },
       body: JSON.stringify({ refreshToken }),
       cache: "no-store",
     });

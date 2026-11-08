@@ -5,6 +5,7 @@ import {
   CORE_API_URL,
   REFRESH_COOKIE,
   clearSessionCookies,
+  clientIpHeaders,
   refreshTokens,
   setSessionCookies,
   type TokenResponse,
@@ -12,8 +13,8 @@ import {
 
 /**
  * Backend-for-frontend proxy: /api/core/api/v1/... → core-app /api/v1/...
- * Adds the access token from the httpOnly cookie, the UI language and the caller's Idempotency-Key, and
- * refreshes the session once on 401. Tokens never reach browser JavaScript.
+ * Adds the access token from the httpOnly cookie, the UI language, the caller's Idempotency-Key and the client's
+ * IP address (for the gateway's per-IP limits), and refreshes the session once on 401. Tokens never reach browser JavaScript.
  */
 const FORWARDED_REQUEST_HEADERS = ["content-type", "accept", "idempotency-key"];
 const FORWARDED_RESPONSE_HEADERS = [
@@ -36,6 +37,7 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
   }
   const target = `${CORE_API_URL}/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`;
   const body = ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer();
+  const clientIp = clientIpHeaders(request);
 
   const call = (accessToken: string | undefined) => {
     const headers = new Headers();
@@ -44,6 +46,7 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
       if (value) headers.set(name, value);
     }
     headers.set("accept-language", toLocale(request.cookies.get(LOCALE_COOKIE)?.value));
+    for (const [name, value] of Object.entries(clientIp)) headers.set(name, value);
     if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
     return fetch(target, { method: request.method, headers, body, cache: "no-store", redirect: "manual" });
   };
@@ -52,7 +55,7 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
   let upstream = await call(request.cookies.get(ACCESS_COOKIE)?.value);
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   if (upstream.status === 401 && refreshToken) {
-    refreshed = await refreshTokens(refreshToken);
+    refreshed = await refreshTokens(refreshToken, clientIp);
     if (refreshed) {
       upstream = await call(refreshed.accessToken);
     }

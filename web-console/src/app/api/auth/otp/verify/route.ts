@@ -1,17 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { LOCALE_COOKIE, toLocale } from "@/i18n/locales";
-import { CORE_API_URL, setSessionCookies, type TokenResponse } from "@/lib/server/session";
+import { CORE_API_URL, clientIpHeaders, setSessionCookies, type TokenResponse } from "@/lib/server/session";
 import { STAFF_ROLES } from "@/lib/auth/roles";
 
 /** Verifies the OTP, checks the account is staff, then stores the tokens in httpOnly cookies. */
 export async function POST(request: NextRequest) {
   const locale = toLocale(request.cookies.get(LOCALE_COOKIE)?.value);
+  const clientIp = clientIpHeaders(request);
   const upstream = await fetch(`${CORE_API_URL}/api/v1/auth/otp/verify`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "accept-language": locale,
       "idempotency-key": request.headers.get("idempotency-key") ?? crypto.randomUUID(),
+      ...clientIp,
     },
     body: await request.text(),
     cache: "no-store",
@@ -24,14 +26,14 @@ export async function POST(request: NextRequest) {
   }
   const tokens = (await upstream.json()) as TokenResponse;
   const me = await fetch(`${CORE_API_URL}/api/v1/me`, {
-    headers: { authorization: `Bearer ${tokens.accessToken}` },
+    headers: { authorization: `Bearer ${tokens.accessToken}`, ...clientIp },
     cache: "no-store",
   }).then((r) => r.json() as Promise<{ roles?: { role: string }[] }>);
   const isStaff = (me.roles ?? []).some((r) => (STAFF_ROLES as readonly string[]).includes(r.role));
   if (!isStaff) {
     await fetch(`${CORE_API_URL}/api/v1/auth/logout`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...clientIp },
       body: JSON.stringify({ refreshToken: tokens.refreshToken }),
     });
     return NextResponse.json({ code: "console.not-staff", status: 403 }, { status: 403 });
