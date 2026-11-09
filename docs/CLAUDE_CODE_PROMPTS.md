@@ -25,7 +25,13 @@
 - [x] Prompt 5 — Booking and trip lifecycle
 - [x] Prompt 6 — Dispatch and at-risk detection
 - [x] Since Prompt 6 — api-gateway, platform-security, JWKS, dev/check scripts, handover docs
-- [ ] Prompt 7 — Location service (realtime, through the gateway)
+- [ ] Prompt 7 — Location service (realtime, through the gateway), in five parts:
+  - [ ] 7a — Driver ingestion (pings, noise filter, batch endpoint, state hash, scripts)
+  - [ ] 7b — WebSocket auth (ticket design) and live trip updates
+  - [ ] 7c — Breadcrumb persistence (`booking.location_pings`)
+  - [ ] 7d — Public tracking link (**limits must be in `enforce` before it goes live**)
+  - [ ] 7e — Load test (500 drivers, local)
+  - [ ] Follow-up: remove the staging `LOCATION_HOST` bypass once the driver app uses the API host
 - [ ] Prompt 8 — Dispatcher console and corporate portal
 - [ ] Prompt 9 — Telegram bot (public webhook route)
 - [ ] Prompt 10 — Payments, ledger, payouts, invoices (public webhook route)
@@ -376,8 +382,27 @@ can't miss them:
 
 ## Prompt 7 — Location service (realtime, through the gateway)
 
+Prompt 7 is split into five sub-prompts. Paste them in order; 7c can run alongside 7b.
+Each one ends with `scripts/check.sh`, a commit and an updated handover doc.
+
+| Sub-prompt | Scope | Depends on |
+|---|---|---|
+| 7a | Driver ingestion: inventory, ping payload, noise filter, batch endpoint, state hash, scripts | — |
+| 7b | WebSocket auth (ticket design) and live trip updates with subscription authorization | 7a |
+| 7c | Breadcrumbs in a daily-partitioned `booking.location_pings` | 7a |
+| 7d | Public tracking link (share tokens, public route, own rate-limit policy) | 7b |
+| 7e | Load test: 500 drivers through the gateway, run locally | 7a, 7b |
+
+Not in Prompt 7: removing the staging bypass (`{$LOCATION_HOST}` block in
+`deploy/staging/Caddyfile` and `LOCATION_HOST` in compose, .env examples and docs). It waits
+until the driver app sends pings to the API host; do it as a small follow-up then.
+
+### Prompt 7a — Driver ingestion
+
 ```
 Read CLAUDE.md and the latest docs/handover-*.md first.
+
+This is part 1 of 5 of the location-service work (Prompt 7a). Only do this part.
 
 Extend location-service (a separate Spring Boot app that already exists):
 
@@ -391,53 +416,126 @@ Step 1 — check what already exists before writing anything:
 Security and routing:
 - Use the platform-security library to verify tokens via core-app's JWKS.
   Do not copy any token code. location-service holds no signing keys.
-- All traffic goes through the api-gateway, including WebSockets. Test that
-  location-service is not reachable directly from outside in the local stack.
-- Remove the direct bypass on staging: the `{$LOCATION_HOST}` block in
-  deploy/staging/Caddyfile and `LOCATION_HOST` (compose, .env examples, docs), once the
-  driver app sends pings to the API host. Tell me if that has to wait for the app.
-- WebSocket authentication: browsers cannot send an Authorization header on the
-  handshake, and the console keeps tokens in httpOnly cookies behind the BFF.
-  Propose a design and wait for my approval. My preferred option: the BFF requests a
-  short-lived, single-use WebSocket ticket from core-app (bound to the user, expiring
-  in ~30 seconds), the browser connects through the gateway with that ticket, and the
-  ticket is validated and consumed on connect. The driver app may pass its access
-  token in the handshake instead. Explain the trade-offs of the alternatives.
-- Handle token expiry on long-lived sockets (close with a clear code so clients
-  reconnect with a fresh token or ticket).
+- All traffic goes through the api-gateway. Test that location-service is not
+  reachable directly from outside in the local stack.
 
 Functionality:
 - Drivers send location pings {lat, lng, speed, heading, accuracy, ts} every ~4s on trip,
   ~15s idle. Also accept an HTTP batch endpoint (through the gateway) for when the
   socket drops.
 - Write latest position to Redis GEO + a driver state hash (last_seen, status, trip_id).
-- Publish trip-scoped updates via Redis pub/sub so passengers, dispatchers and the
-  public share link receive live updates on their own WebSocket subscriptions.
-- Authorization on subscriptions: a passenger only sees their own trips, a dispatcher
-  sees all, a corporate user only their company's trips.
-- Batch-persist breadcrumbs to a daily-partitioned booking.location_pings table
-  (create partitions automatically; retention 90 days). Write through a module API
-  or event, not directly into another module's tables.
-- Public tracking: GET /api/v1/public/track/{shareToken} + a socket topic for that token,
-  exposing only driver first name, vehicle, plate, position and ETA.
-  This is a public unauthenticated gateway route: list it explicitly with a reason
-  (gateway SecurityConfiguration) and give it its own per-IP rate-limit policy
-  (a passenger's family may reload the link often; a scraper must not enumerate tokens).
-  Share tokens must be long and random (at least 128 bits), expire when the trip
-  ends plus a short grace period, and be revocable. Note in the handover doc that the
-  route must not go live until the limits run in `enforce`.
 - Basic GPS noise filtering (drop pings with poor accuracy or impossible speed).
   Check the `pings` policy (10 burst, 1/s per driver) against the 4 s / 15 s intervals
   and the HTTP batch endpoint: a batch after a dead zone must be one request, not many.
-- Load-test script (k6 or Gatling) simulating 500 drivers through the gateway, and
-  report gateway latency and resource use. Getting 500 tokens from one machine would
-  hit the `auth` policy (30 then 30/min per IP): propose how the test gets its tokens
-  (e.g. a local-profile-only token helper, or limits set for the test) and keep the
-  test realistic about the limits that apply to pings. Run it locally, not on the
-  2 GB staging droplet.
 
 Add location-service to scripts/dev.sh (stack up and smoke test) and scripts/check.sh.
-Finish by running scripts/check.sh and writing the handover doc.
+Finish by running scripts/check.sh and writing the handover doc (note what 7b–7e still need).
+
+Plan first.
+```
+
+### Prompt 7b — WebSocket authentication and live trip updates
+
+```
+Read CLAUDE.md and the latest docs/handover-*.md first.
+
+This is part 2 of 5 of the location-service work (Prompt 7b). Prompt 7a (driver ingestion)
+is done. Only do this part.
+
+WebSocket authentication:
+- All traffic goes through the api-gateway, including WebSockets (route /ws/**,
+  `ws-connect` rate-limit policy).
+- Browsers cannot send an Authorization header on the handshake, and the console keeps
+  tokens in httpOnly cookies behind the BFF. Propose a design and wait for my approval.
+  My preferred option: the BFF requests a short-lived, single-use WebSocket ticket from
+  core-app (bound to the user, expiring in ~30 seconds), the browser connects through the
+  gateway with that ticket, and the ticket is validated and consumed on connect. The
+  driver app may pass its access token in the handshake instead. Explain the trade-offs
+  of the alternatives.
+- Handle token expiry on long-lived sockets (close with a clear code so clients
+  reconnect with a fresh token or ticket).
+
+Live updates:
+- Drivers can send pings over the socket as well as HTTP (same validation and noise
+  filter as 7a).
+- Publish trip-scoped updates via Redis pub/sub so passengers and dispatchers receive
+  live updates on their own WebSocket subscriptions. Leave room for the public share-link
+  topic that 7d adds.
+- Authorization on subscriptions: a passenger only sees their own trips, a dispatcher
+  sees all, a corporate user only their company's trips. location-service has no trip
+  data: propose how it learns who may see a trip (ask core-app, or a cache fed by
+  events) and wait for my approval.
+
+Tests for ticket expiry and reuse, the expiry close code and each subscription rule.
+Update scripts/dev.sh smoke test if useful. Finish by running scripts/check.sh and
+updating the handover doc.
+
+Plan first.
+```
+
+### Prompt 7c — Breadcrumb persistence
+
+```
+Read CLAUDE.md and the latest docs/handover-*.md first.
+
+This is part 3 of 5 of the location-service work (Prompt 7c). Prompt 7a is done
+(7b may be in progress). Only do this part.
+
+- Batch-persist breadcrumbs (accepted pings for drivers on a trip) to a
+  daily-partitioned booking.location_pings table (create partitions automatically;
+  retention 90 days). Write through a module API or event, not directly into another
+  module's tables. location-service has no database: propose the path (e.g. RabbitMQ
+  messages consumed by the booking module) and the batch size and interval.
+- Flyway migration in core-app; the partitioning and retention job are tested with
+  Testcontainers.
+- Make sure a slow or down database does not slow down ping ingestion.
+
+Finish by running scripts/check.sh and updating the handover doc.
+
+Plan first.
+```
+
+### Prompt 7d — Public tracking link
+
+```
+Read CLAUDE.md and the latest docs/handover-*.md first.
+
+This is part 4 of 5 of the location-service work (Prompt 7d). Prompts 7a and 7b are done.
+Only do this part.
+
+- Public tracking: GET /api/v1/public/track/{shareToken} + a socket topic for that token,
+  exposing only driver first name, vehicle, plate, position and ETA.
+- This is a public unauthenticated gateway route: list it explicitly with a reason
+  (gateway SecurityConfiguration) and give it its own per-IP rate-limit policy
+  (a passenger's family may reload the link often; a scraper must not enumerate tokens).
+  The service behind it verifies the token itself.
+- Share tokens must be long and random (at least 128 bits), expire when the trip
+  ends plus a short grace period, and be revocable. Propose the grace period.
+- Note in the handover doc that the route must not go live until the limits run in
+  `enforce`.
+
+Tests for expiry, revocation, unknown tokens and the fields exposed. Finish by running
+scripts/check.sh and updating the handover doc.
+
+Plan first.
+```
+
+### Prompt 7e — Load test
+
+```
+Read CLAUDE.md and the latest docs/handover-*.md first.
+
+This is part 5 of 5 of the location-service work (Prompt 7e). Prompts 7a–7d are done.
+Only do this part.
+
+- Load-test script (k6 or Gatling) simulating 500 drivers through the gateway (HTTP pings,
+  batches and sockets), and report gateway latency and resource use.
+- Getting 500 tokens from one machine would hit the `auth` policy (30 then 30/min per IP):
+  propose how the test gets its tokens (e.g. a local-profile-only token helper, or limits
+  set for the test) and keep the test realistic about the limits that apply to pings.
+- Run it locally, not on the 2 GB staging droplet. Document how to run it.
+
+Finish by running scripts/check.sh and updating the handover doc with the results.
 
 Plan first.
 ```

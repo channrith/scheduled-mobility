@@ -75,8 +75,66 @@ class LocationPingIT {
 		ping(token, Map.of("latitude", 11.5, "longitude", 104.9, "recordedAt", Instant.now().toString())).expectStatus().isAccepted();
 
 		ping(token, Map.of("latitude", 11.6, "longitude", 104.8, "recordedAt", Instant.now().minusSeconds(60).toString()))
-			.expectStatus().isAccepted().expectBody().jsonPath("$.stored").isEqualTo(false);
+			.expectStatus().isAccepted().expectBody().jsonPath("$.stored").isEqualTo(false).jsonPath("$.reason").isEqualTo("stale");
 		assertThat(redis.opsForHash().get("driver:location:" + driver, "lat")).isEqualTo("11.5");
+	}
+
+	@Test
+	void speedAndHeadingAreStoredAndLastSeenIsKeptInTheDriverState() {
+		UUID driver = UUID.randomUUID();
+		Instant at = Instant.now().minusSeconds(2);
+
+		ping(TestKeys.token(driver, "mobility-core", "DRIVER"), Map.of("latitude", 11.5636, "longitude", 104.9312,
+				"accuracyMeters", 12, "speedMps", 9.5, "headingDegrees", 270, "recordedAt", at.toString()))
+			.expectStatus().isAccepted().expectBody().jsonPath("$.stored").isEqualTo(true).jsonPath("$.reason").doesNotExist();
+
+		assertThat(redis.opsForHash().entries("driver:location:" + driver)).containsEntry("speed", "9.5")
+			.containsEntry("heading", "270.0").containsEntry("accuracy", "12.0");
+		Object lastSeen = redis.opsForHash().get("driver:state:" + driver, "lastSeen");
+		assertThat(Long.parseLong(lastSeen.toString())).isGreaterThanOrEqualTo(at.toEpochMilli());
+		assertThat(redis.getExpire("driver:state:" + driver)).isPositive();
+	}
+
+	@Test
+	void anInaccuratePingIsDroppedButTheDriverIsStillSeen() {
+		UUID driver = UUID.randomUUID();
+
+		ping(TestKeys.token(driver, "mobility-core", "DRIVER"),
+				Map.of("latitude", 11.5, "longitude", 104.9, "accuracyMeters", 250, "recordedAt", Instant.now().toString()))
+			.expectStatus().isAccepted().expectBody().jsonPath("$.stored").isEqualTo(false).jsonPath("$.reason").isEqualTo("accuracy");
+
+		assertThat(redis.hasKey("driver:location:" + driver)).isFalse();
+		assertThat(redis.opsForGeo().position("driver:positions", driver.toString())).containsOnlyNulls();
+		assertThat(redis.opsForHash().get("driver:state:" + driver, "lastSeen")).isNotNull();
+	}
+
+	@Test
+	void aGpsJumpIsDroppedButNormalDrivingIsNot() {
+		UUID driver = UUID.randomUUID();
+		String token = TestKeys.token(driver, "mobility-core", "DRIVER");
+		Instant start = Instant.now().minusSeconds(20);
+		ping(token, Map.of("latitude", 11.5636, "longitude", 104.9312, "recordedAt", start.toString())).expectStatus().isAccepted();
+
+		// About 45 m in 4 s (40 km/h).
+		ping(token, Map.of("latitude", 11.5640, "longitude", 104.9312, "recordedAt", start.plusSeconds(4).toString()))
+			.expectBody().jsonPath("$.stored").isEqualTo(true);
+		// About 5 km in 4 s.
+		ping(token, Map.of("latitude", 11.6090, "longitude", 104.9312, "recordedAt", start.plusSeconds(8).toString()))
+			.expectBody().jsonPath("$.stored").isEqualTo(false).jsonPath("$.reason").isEqualTo("speed");
+		assertThat(redis.opsForHash().get("driver:location:" + driver, "lat")).isEqualTo("11.564");
+	}
+
+	@Test
+	void theSpeedCheckOnlyComparesWithARecentPosition() {
+		UUID driver = UUID.randomUUID();
+		String token = TestKeys.token(driver, "mobility-core", "DRIVER");
+		Instant old = Instant.now().minusSeconds(180);
+		ping(token, Map.of("latitude", 11.5636, "longitude", 104.9312, "recordedAt", old.toString())).expectStatus().isAccepted();
+
+		// 5 km in 3 min is 100 km/h anyway, but 20 km would be 400 km/h: accepted, because the last position is older
+		// than the 2-minute window (the stored one may itself have been a jump).
+		ping(token, Map.of("latitude", 11.7436, "longitude", 104.9312, "recordedAt", Instant.now().toString()))
+			.expectBody().jsonPath("$.stored").isEqualTo(true);
 	}
 
 	@Test

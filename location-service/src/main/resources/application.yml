@@ -16,6 +16,13 @@ server:
 location:
   # How long a driver's latest position is kept after their last ping.
   position-ttl: 24h
+  # GPS noise filter: dropped pings still answer 202 with stored=false and a reason.
+  filter:
+    max-accuracy-meters: 100
+    # Above this implied speed since the last stored position, a ping is a GPS jump (the airport expressway is the fastest road).
+    max-speed-kmh: 160
+    # The speed check only compares with a position this recent, so one bad position can't block a driver for longer.
+    speed-check-window: 2m
 
 # Tokens are checked with core-app's public keys from its JWKS (platform-security); never issued here. Locally
 # core-app runs on 8080, so no setting is needed; staging sets http://core-app:8080/.well-known/jwks.json. The PEM
