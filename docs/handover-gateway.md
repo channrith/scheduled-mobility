@@ -1,9 +1,29 @@
 # Handover: API gateway, phase 1 (single API host) — and what comes next
 
-Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
-Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) committed `f97ff53` and verified locally by hand; step 2 (BFF forwards the client IP) committed `742edbc`; step 1b (shadow mode) and step 3 (staging Compose, smoke, docs) committed `46f36d3` and **deployed to staging 2026-11-09 in shadow mode** (gateway 211 of 288 MiB; 35 quick calls all passed, "would refuse" logged). Finding: the first Redis use after a gateway start failed to connect once (06:00:51, 6 min after start, first request; Lettuce connects lazily, 500 ms connect timeout on a cold JVM), so the first requests after a restart weren't counted. First fix `3db6ab3` (blocking warm-up on `ApplicationReadyEvent`) **failed its staging deploy and was rolled back to `46f36d3`**: the gateway never turned healthy, so compose never started the console. Cause, reproduced in a rehearsal with every app at 0.35 CPU: the gateway's health check gave a slow start only 30 s + 5 x 15 s; a slower start is marked unhealthy and compose skips everything that waits for it. The blocking warm-up (Lettuce's first connect is synchronous, so its 3 s limit couldn't cut it short) made the start slower still. Second fix, **not committed yet**: `RedisWarmUp` runs in the background (boundedElastic, retries about 1 min, logs "Redis connected for rate limits"), never blocking startup or readiness; `TokenBuckets.take` subscribes off the event loop so a reconnect can't block Netty and the 100 ms limit holds; Redis `connect-timeout` 500 ms → 2 s; staging `start_period` core-app 90 → 240 s, location-service 60 → 180 s, api-gateway 30 → 180 s. Tests `RedisWarmUpTest` (a 5 s synchronous connect doesn't block startup), `RedisWarmUpIT`. Rehearsed under the CPU limit: healthy in 4 m 37 s of the 5 min budget (core-app 224 s there, 151 s on staging), console up, "would refuse" logged. Not checked: whether `3db6ab3` alone passes with the longer start periods. Next: read the shadow logs over a few days, then `enforce`. Per-phone gateway limit dropped 2026-11-09; identity OTP hardening proposed, not approved. Don't deploy anything after `742edbc` without the step 3 Compose change: staging's gateway would have no `REDIS_HOST`. Read this file and `CLAUDE.md`;
+Written 2026-10-30, updated 2026-11-09. **Start here** in a new Claude Code session: this is the latest handover.
+Status: gateway phases 1 and 2 done and verified on staging (sections 4 and 10). **Phase 3, rate limits, is
+deployed to staging in shadow mode** (section 11; latest commit `7f3f69d`, 2026-11-09): requests over a limit are
+only logged ("would refuse"), nothing is refused yet. Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
+
+## Next session: to do
+
+1. **Read the shadow logs** (a few days after 2026-11-09, with real use):
+   `ssh root@146.190.4.99 'cd /opt/mobility && docker compose logs api-gateway | grep "would refuse"'`.
+   Which policies show up, for whom (request id → core-app log)? Raise a number in
+   `api-gateway/src/main/resources/application.yml` if legitimate users hit it. Each limit must cover the busiest
+   legitimate case: `auth` 30 at once then 30/min per IP (an office behind one NAT IP at 9:00, ~2 calls per
+   sign-in); `pings` 10 at once then 1/s per driver (a driver app that replays a dead zone's pings one by one
+   would hit it: it should batch or space them).
+   Also `grep -c "Rate limits are not applied"` should stay 0 or near it (Redis unreachable or a >100 ms call).
+2. **Switch to enforce** once the logs are clean: add `GATEWAY_RATE_LIMITS_MODE=enforce` to the droplet's `.env`,
+   `docker compose up -d api-gateway`; verify 31 quick `POST /api/v1/auth/otp/request` (or `/auth/refresh`) calls
+   from one IP → 429 with `Retry-After`, and console sign-in still works. Update this handover.
+3. **Waiting for the user's decision: identity OTP hardening** (section 11, "Proposed"). 6-digit codes and a cap on
+   failed verifies per phone. Note section 8: SMS/OTP code and settings are off limits without the user's explicit
+   go-ahead, so ask first; check the SMS template before changing the code length.
+4. Then phase 4 (partners, API keys) when the first partner needs it, or the other follow-ups in section 9.
+5. Small, optional: commit this handover update if it isn't yet (`git status`).
 
 ---
 
@@ -132,6 +152,13 @@ location-service: `RequestIdFilterTest` each.
 - The access line is written in `doFinally`, after the response: log assertions must wait (Awaitility).
 - A flaky core-app test surfaced in CI meanwhile (random test zones overlapping); fixed with `PricingApi.nextSpot()`.
 - On a Mac, Netty's DNS ERROR is harmless but alarming; solved by the macOS profiles.
+- `scripts/dev.sh` started the gateway without `.env`: no Redis password, so local rate limits silently failed open
+  (fixed in `46f36d3`). Fail-open hides a broken limiter: check for "Rate limits are not applied" in the log.
+- Lettuce's first connect is synchronous on the subscribing thread: a `block(timeout)` or a Reactor `.timeout()`
+  can't cut it short. Never block startup on Redis; subscribe Redis calls off the event loop (`3db6ab3` → `7f3f69d`).
+- Health-check `start_period` must outlast a CPU-starved start (1 vCPU, every JVM at once): an "unhealthy" service
+  makes `docker compose up` skip everything that `depends_on` it being healthy, and the deploy rolls back.
+  Rehearse deploy-setup changes with every app capped (e.g. `cpus: 0.35` in the override), not just plain.
 
 ## 8. How the user works (unchanged)
 
@@ -145,13 +172,14 @@ files were once deleted from the working tree by accident).
 
 ## 9. Follow-ups
 
-- Gateway phase 2 (section 10), then phases 3 and 4 (section 3).
+- Gateway phase 3: shadow → enforce (see "Next session"); phase 4 (partners) when needed (section 3).
 - Dispatcher console screens (the other candidate for the next prompt).
 - A dispatch (Prompt 6) handover doc, if more detail than section 0 is needed.
 - Move pings to the API host in the driver app, then drop `LOCATION_HOST`.
 - `web-console/.env.example` is ignored by `web-console/.gitignore` (`.env*`); add `!.env.example` if it should
   be tracked.
-- Consider 4 GB before load testing; the gateway and location-service each sit at ~75% of 256 MB.
+- Consider 4 GB before load testing; the gateway sits at ~73% of 288 MB (231 MiB peak in a burst), location-service
+  ~75% of 256 MB.
 
 ## 10. Gateway phase 2 (approved 2026-10-31; decisions in section 2)
 
@@ -199,7 +227,10 @@ update this handover.
 JWKS` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` · `chore(deploy): JWKS URL
 for gateway and location-service; docs`.
 
-## 11. Gateway phase 3: rate limits (approved 2026-11-08; step 1 committed `f97ff53`)
+## 11. Gateway phase 3: rate limits (approved 2026-11-08; deployed in shadow mode 2026-11-09)
+
+**Status history (moved from the top, 2026-11-09):** **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) committed `f97ff53` and verified locally by hand; step 2 (BFF forwards the client IP) committed `742edbc`; step 1b (shadow mode) and step 3 (staging Compose, smoke, docs) committed `46f36d3` and **deployed to staging 2026-11-09 in shadow mode** (gateway 211 of 288 MiB; 35 quick calls all passed, "would refuse" logged). Finding: the first Redis use after a gateway start failed to connect once (06:00:51, 6 min after start, first request; Lettuce connects lazily, 500 ms connect timeout on a cold JVM), so the first requests after a restart weren't counted. First fix `3db6ab3` (blocking warm-up on `ApplicationReadyEvent`) **failed its staging deploy and was rolled back to `46f36d3`**: the gateway never turned healthy, so compose never started the console. Cause, reproduced in a rehearsal with every app at 0.35 CPU: the gateway's health check gave a slow start only 30 s + 5 x 15 s; a slower start is marked unhealthy and compose skips everything that waits for it. The blocking warm-up (Lettuce's first connect is synchronous, so its 3 s limit couldn't cut it short) made the start slower still. Second fix, `7f3f69d`, **deployed to staging 2026-11-09 and verified** (all services healthy, "Redis connected for rate limits" logged once): `RedisWarmUp` runs in the background (boundedElastic, retries about 1 min, logs "Redis connected for rate limits"), never blocking startup or readiness; `TokenBuckets.take` subscribes off the event loop so a reconnect can't block Netty and the 100 ms limit holds; Redis `connect-timeout` 500 ms → 2 s; staging `start_period` core-app 90 → 240 s, location-service 60 → 180 s, api-gateway 30 → 180 s. Tests `RedisWarmUpTest` (a 5 s synchronous connect doesn't block startup), `RedisWarmUpIT`. Rehearsed under the CPU limit: healthy in 4 m 37 s of the 5 min budget (core-app 224 s there, 151 s on staging), console up, "would refuse" logged. Not checked: whether `3db6ab3` alone passes with the longer start periods. Next: read the shadow logs over a few days, then `enforce`. Per-phone gateway limit dropped 2026-11-09; identity OTP hardening proposed, not approved. Don't deploy anything after `742edbc` without the step 3 Compose change: staging's gateway would have no `REDIS_HOST`.
+
 
 **Findings that shape it:**
 - The console's BFF calls the gateway without `X-Forwarded-For` (`web-console/src/app/api/core/[...path]/route.ts`,
