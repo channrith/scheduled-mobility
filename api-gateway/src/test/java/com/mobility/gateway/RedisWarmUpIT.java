@@ -26,8 +26,8 @@ import org.testcontainers.utility.DockerImageName;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 3: the gateway connects to Redis and loads the token-bucket script at startup, before any request, so the
- * first request after a restart is counted like any other.
+ * Phase 3: the gateway connects to Redis and loads the token-bucket script in the background after startup, before
+ * any request, so the first requests after a restart are counted like any other.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -58,11 +58,25 @@ class RedisWarmUpIT {
 	void theScriptIsLoadedBeforeAnyRequest() throws IOException {
 		String sha = sha1("ratelimit/token_bucket.lua");
 
-		List<Boolean> exists = redis.execute((RedisCallback<List<Boolean>>) connection -> connection
-			.scriptingCommands().scriptExists(sha));
+		// The warm-up runs in the background after startup: give it a few seconds.
+		List<Boolean> exists = List.of(false);
+		for (int i = 0; i < 50 && !exists.equals(List.of(true)); i++) {
+			sleepBriefly();
+			exists = redis.execute((RedisCallback<List<Boolean>>) connection -> connection.scriptingCommands()
+				.scriptExists(sha));
+		}
 
 		assertThat(exists).containsExactly(true);
 		assertThat(core.hits.get()).as("no request was sent").isZero();
+	}
+
+	static void sleepBriefly() {
+		try {
+			Thread.sleep(100);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	static String sha1(String resource) throws IOException {

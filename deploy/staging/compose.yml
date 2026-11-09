@@ -84,7 +84,9 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 90s
+      # Failures don't count during start_period and the first success ends it, so it only has to outlast a slow
+      # start: on the 1-vCPU droplet all JVMs start at once (core-app took 151 s on 2026-11-09).
+      start_period: 240s
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,7 +113,8 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      # Slow start with every JVM starting at once (see core-app).
+      start_period: 180s
     depends_on:
       redis:
         condition: service_healthy
@@ -145,7 +148,8 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      # See core-app. At 30 s a slow start was marked unhealthy, compose then skipped the console, and the deploy failed.
+      start_period: 180s
     # ~185 MiB before rate limits; with the Redis client a 200-request burst peaked at ~234 MiB (2026-11-09).
     mem_limit: ${API_GATEWAY_MEM_LIMIT:-288m}
     logging: *logging

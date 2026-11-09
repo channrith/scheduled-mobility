@@ -12,6 +12,7 @@ import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /** Token buckets in Redis: one atomic script call per request ({@code ratelimit/token_bucket.lua}). */
 @Component
@@ -47,7 +48,11 @@ class TokenBuckets {
 			.then();
 	}
 
-	/** Takes a token from the caller's bucket for this policy. Errors (Redis down) are the caller's to handle. */
+	/**
+	 * Takes a token from the caller's bucket for this policy. Errors (Redis down) are the caller's to handle.
+	 * Subscribes off the event loop: while Lettuce is not connected, its (re)connect blocks the subscribing thread
+	 * for up to the connect timeout, which the caller's per-request timeout could not cut short on an event loop.
+	 */
 	Mono<Decision> take(Policy policy, String caller) {
 		List<String> keys = List.of(keyPrefix + policy.id() + ":" + caller);
 		List<String> args = List.of(Integer.toString(policy.burst()), Double.toString(policy.tokensPerMilli()));
@@ -57,6 +62,7 @@ class TokenBuckets {
 				return all;
 			})
 			.map(result -> result.get(0) == 1L ? Decision.ALLOWED
-					: new Decision(false, Duration.ofMillis(Math.max(1, result.get(1)))));
+					: new Decision(false, Duration.ofMillis(Math.max(1, result.get(1)))))
+			.subscribeOn(Schedulers.boundedElastic());
 	}
 }

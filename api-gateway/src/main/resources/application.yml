@@ -51,7 +51,8 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
-      connect-timeout: 500ms
+      # 2 s for a cold JVM on a busy droplet; requests still wait at most gateway.rate-limits.redis-timeout.
+      connect-timeout: 2s
       timeout: 200ms
 
 server:
