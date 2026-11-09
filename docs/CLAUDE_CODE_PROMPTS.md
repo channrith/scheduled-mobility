@@ -31,8 +31,12 @@
 - [ ] Prompt 10 — Payments, ledger, payouts, invoices (public webhook route)
 - [ ] Prompt 11 — Notifications, safety and audit
 - [ ] Prompt 12 — Production readiness
-- [ ] Gateway phase 3 — rate limits. **Must be done before any public route
+- [~] Gateway phase 3 — rate limits. Built and on staging in **shadow mode** since 2026-11-09
+      (over-limit requests are only logged). Left: read the shadow logs, then switch to `enforce`
+      (see `docs/handover-gateway.md`). **Limits must be enforced before any public route
       (tracking link, Telegram or payment webhooks) is exposed in a real environment.**
+- [ ] Identity OTP hardening (6-digit codes, cap on failed verifies per phone) —
+      proposed, **waiting for my decision** (SMS/OTP code needs my explicit go-ahead)
 - [ ] Gateway phase 4 — partner API keys, when the first partner needs it
       (decide whether hotels book through the corporate portal or a partner API)
 
@@ -358,7 +362,15 @@ can't miss them:
 - The console's BFF calls the gateway, never services directly.
 - Every public unauthenticated route must be listed explicitly in the gateway
   configuration with a reason, and the service behind it must verify the caller itself.
-- Rate limits arrive in gateway phase 3; partner API keys in gateway phase 4.
+- Rate limits exist (gateway phase 3: Redis token buckets in `api-gateway/.../application.yml`,
+  `gateway.rate-limits.policies`, first match wins, 429 problem+json with `Retry-After`).
+  Every new route gets an explicit policy sized for its busiest legitimate caller;
+  don't let a new route fall through to `default` by accident. A public route must not
+  go live until the limits run in `enforce` (not `shadow`) in that environment.
+- Public routes must live under `/api/**` (or get their own gateway route): anything
+  else is a 404 at the gateway.
+- SMS/OTP code and settings are off limits without my explicit go-ahead.
+- Partner API keys arrive in gateway phase 4.
 
 ---
 
@@ -367,14 +379,23 @@ can't miss them:
 ```
 Read CLAUDE.md and the latest docs/handover-*.md first.
 
-Implement location-service as a separate Spring Boot app:
+Extend location-service (a separate Spring Boot app that already exists):
+
+Step 1 — check what already exists before writing anything:
+- location-service already takes POST /api/v1/locations (DRIVER) into Redis
+  (driver:location:<userId>, GEO driver:positions), uses platform-security with core-app's
+  JWKS, and the gateway already routes /api/v1/locations/** and /ws/** to it, with
+  `pings` and `ws-connect` rate-limit policies. List what exists, what needs changes and
+  what is missing below. Only add or change what is needed; don't duplicate.
 
 Security and routing:
 - Use the platform-security library to verify tokens via core-app's JWKS.
   Do not copy any token code. location-service holds no signing keys.
-- All traffic goes through the api-gateway, including WebSockets. Add the gateway routes
-  (HTTP and WebSocket) and test that location-service is not reachable directly
-  from outside in the local stack.
+- All traffic goes through the api-gateway, including WebSockets. Test that
+  location-service is not reachable directly from outside in the local stack.
+- Remove the direct bypass on staging: the `{$LOCATION_HOST}` block in
+  deploy/staging/Caddyfile and `LOCATION_HOST` (compose, .env examples, docs), once the
+  driver app sends pings to the API host. Tell me if that has to wait for the app.
 - WebSocket authentication: browsers cannot send an Authorization header on the
   handshake, and the console keeps tokens in httpOnly cookies behind the BFF.
   Propose a design and wait for my approval. My preferred option: the BFF requests a
@@ -397,15 +418,23 @@ Functionality:
 - Batch-persist breadcrumbs to a daily-partitioned booking.location_pings table
   (create partitions automatically; retention 90 days). Write through a module API
   or event, not directly into another module's tables.
-- Public tracking: GET /public/track/{shareToken} + a socket topic for that token,
+- Public tracking: GET /api/v1/public/track/{shareToken} + a socket topic for that token,
   exposing only driver first name, vehicle, plate, position and ETA.
-  This is a public unauthenticated gateway route: list it explicitly with a reason.
+  This is a public unauthenticated gateway route: list it explicitly with a reason
+  (gateway SecurityConfiguration) and give it its own per-IP rate-limit policy
+  (a passenger's family may reload the link often; a scraper must not enumerate tokens).
   Share tokens must be long and random (at least 128 bits), expire when the trip
-  ends plus a short grace period, and be revocable. Rate limiting comes in gateway
-  phase 3; note in the handover doc that this route must not go live before then.
+  ends plus a short grace period, and be revocable. Note in the handover doc that the
+  route must not go live until the limits run in `enforce`.
 - Basic GPS noise filtering (drop pings with poor accuracy or impossible speed).
+  Check the `pings` policy (10 burst, 1/s per driver) against the 4 s / 15 s intervals
+  and the HTTP batch endpoint: a batch after a dead zone must be one request, not many.
 - Load-test script (k6 or Gatling) simulating 500 drivers through the gateway, and
-  report gateway latency and resource use.
+  report gateway latency and resource use. Getting 500 tokens from one machine would
+  hit the `auth` policy (30 then 30/min per IP): propose how the test gets its tokens
+  (e.g. a local-profile-only token helper, or limits set for the test) and keep the
+  test realistic about the limits that apply to pings. Run it locally, not on the
+  2 GB staging droplet.
 
 Add location-service to scripts/dev.sh (stack up and smoke test) and scripts/check.sh.
 Finish by running scripts/check.sh and writing the handover doc.
@@ -450,6 +479,9 @@ Corporate portal pages (CORPORATE_ADMIN and CORPORATE_BOOKER roles, own company 
 - Keep the dispatcher screens dense and usable on a laptop; the corporate portal
   should be simpler and work well on a phone.
 - Role-based navigation: each role sees only its own area.
+- No driver app sends pings yet, so every assigned trip near pickup shows RED / NO_PING.
+  Add a local-only ping simulator (e.g. a scripts/dev.sh command that sends pings along
+  a route for chosen drivers) so the live map and risk tiers can be tested.
 - Extend the scripts/dev.sh smoke test with a dispatcher and a corporate login.
 
 Finish by running scripts/check.sh and writing the handover doc.
@@ -476,8 +508,10 @@ Security and routing:
   Telegram account to our user and apply the same role and scope checks as the
   REST API (a booker only books for their own company, a driver only acts on
   their own trips). Do not bypass authorization because the request came from Telegram.
-- Rate limiting comes in gateway phase 3; note in the handover doc that this route
-  must not go live before then. Also add per-chat throttling inside the bot.
+- Give the webhook its own gateway rate-limit policy. Telegram sends from a few IP
+  ranges, so a plain per-IP limit like `public` (60/min) could throttle real updates at
+  busy times: size it for Telegram's peak, or propose a better key. The route must not go
+  live until the limits run in `enforce`. Also add per-chat throttling inside the bot.
 
 Functionality:
 - Corporate bookers and hotel staff can book: pickup, drop-off (search places),
@@ -485,7 +519,9 @@ Functionality:
 - Drivers receive assignment messages in Khmer with pickup landmark, notes, fare,
   payment type, and inline buttons: Confirm / Can't do it.
 - Drivers can tap buttons for Arrived / Started / Completed as a fallback to the app.
-- Link Telegram accounts to users by phone number verification.
+- Link Telegram accounts to users by phone number verification. This touches SMS/OTP:
+  propose how (reuse identity's OTP service as is, or Telegram's shared contact) and
+  wait for my explicit go-ahead before changing any OTP code or settings.
 - Make webhook handling idempotent (Telegram retries updates; use update_id).
 - All messages from message bundles (km/en).
 
@@ -511,8 +547,9 @@ Security and routing:
   stale or replayed requests (timestamp + provider_ref), and never trust amounts
   from the webhook without checking them against our own payment record.
   Leave a place for an IP allowlist at the gateway once the provider is chosen.
-- Rate limiting comes in gateway phase 3; note in the handover doc that this route
-  must not go live before then.
+- Give the webhook its own gateway rate-limit policy, sized so the provider's retries
+  and month-end peaks are never refused (a refused payment webhook means a paid trip
+  looks unpaid). The route must not go live until the limits run in `enforce`.
 - Admin finance endpoints (payouts, invoices, ageing) go through the gateway with the
   normal JWT and ADMIN role, verified via platform-security.
 
@@ -558,8 +595,10 @@ Security and routing:
 - SOS and incident endpoints go through the gateway with the normal JWT.
   The SOS endpoint must keep working when other parts of the system are degraded:
   make sure it has no unnecessary dependencies on the request path.
-- Rate limits (gateway phase 3) must never block SOS requests: note this in the
-  handover doc so the phase 3 configuration exempts or separately limits it.
+- Rate limits must never block SOS requests. Today SOS would fall under the gateway's
+  `default` policy (60 burst, 10/s per user). Add an explicit exemption or a separate,
+  generous policy for the SOS endpoint in the gateway configuration, with a test that
+  SOS still passes when the user's default bucket is empty.
 
 Notifications:
 - A worker consuming domain events and sending via channel interfaces:
@@ -594,7 +633,10 @@ Plan first.
 ```
 Read CLAUDE.md and the latest docs/handover-*.md first.
 
-Prepare the system for a pilot deployment:
+Prepare the system for a pilot deployment. Much of the deploy setup already exists for
+staging (images for every app, CI running scripts/check.sh, deploy/staging/, pre-deploy
+database dumps, the deploy-rehearsal skill): review and extend it rather than starting
+over, and list what is missing.
 
 Gateway and security:
 - Include the api-gateway in the deployment as the only public entry point.
@@ -605,8 +647,10 @@ Gateway and security:
   signing with it, an overlap period, removing the old key, and how long services
   and the gateway cache the JWKS. Write it as a runbook and test it locally.
 - List every public unauthenticated gateway route with its reason and its own
-  protection (signature, secret, share token). Confirm gateway phase 3 rate limits
-  are in place before go-live, with SOS exempted or separately limited.
+  protection (signature, secret, share token) and its rate-limit policy. Confirm the
+  limits run in `enforce` mode (not `shadow`) in the pilot environment, that every route
+  has an intended policy, and that SOS is exempted or separately limited.
+- Confirm no direct bypass host to a service remains (e.g. the old `LOCATION_HOST`).
 - Confirm no service other than core-app holds signing keys, and no service
   contains copied token code instead of platform-security.
 - Security review checklist: OWASP top 10, secrets handling, admin MFA,
