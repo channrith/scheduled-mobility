@@ -1,5 +1,7 @@
 package com.mobility.gateway.ratelimit;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +34,17 @@ class TokenBuckets {
 	TokenBuckets(ReactiveStringRedisTemplate redis, RateLimitProperties properties) {
 		this.redis = redis;
 		this.keyPrefix = properties.keyPrefix();
+	}
+
+	/**
+	 * Opens the Redis connection and loads the script, so the first request after a start doesn't pay for either
+	 * (Lettuce connects lazily; on a cold JVM that first connect can miss the per-request timeout).
+	 */
+	Mono<Void> warmUp() {
+		ByteBuffer script = ByteBuffer.wrap(SCRIPT.getScriptAsString().getBytes(StandardCharsets.UTF_8));
+		return redis.execute(connection -> connection.scriptingCommands().scriptLoad(script)
+				.then(connection.ping()))
+			.then();
 	}
 
 	/** Takes a token from the caller's bucket for this policy. Errors (Redis down) are the caller's to handle. */
