@@ -65,6 +65,9 @@ server:
 gateway:
   rate-limits:
     enabled: ${GATEWAY_RATE_LIMITS_ENABLED:true}
+    # enforce: 429 over the limit. shadow: only log "Rate limit '<policy>' would refuse ..." and pass the request,
+    # to check the numbers against real traffic first (staging starts in shadow).
+    mode: ${GATEWAY_RATE_LIMITS_MODE:enforce}
     policies:
       # Sign-in by IP. Generous: an office or bank behind one NAT address signs in together at 9:00.
       - id: auth

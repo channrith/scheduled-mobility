@@ -95,8 +95,8 @@ start() {
 			(cd "$ROOT" && set -a && . ./.env && set +a && exec ./mvnw -B -ntp spring-boot:run -pl location-service) >"$log" 2>&1 &
 			;;
 		api-gateway)
-			# Needs no .env: every setting has a local default.
-			(cd "$ROOT" && exec ./mvnw -B -ntp spring-boot:run -pl api-gateway) >"$log" 2>&1 &
+			# .env for REDIS_PASSWORD (rate limits); without it the limits fail open and nothing is limited.
+			(cd "$ROOT" && set -a && . ./.env && set +a && exec ./mvnw -B -ntp spring-boot:run -pl api-gateway) >"$log" 2>&1 &
 			;;
 		web-console)
 			[[ -d "$ROOT/web-console/node_modules" ]] || fail "web-console/node_modules is missing: cd web-console && npm install"
@@ -244,6 +244,24 @@ cmd_smoke() {
 				-d '{"latitude":11.57,"longitude":104.92}' $GW/api/v1/locations || true)"
 	else
 		say "  skip  checks with a token: set OTP_FIXED_CODE in .env to run them"
+	fi
+	say "Rate limits:"
+	if [[ "${GATEWAY_RATE_LIMITS_MODE:-enforce}" == shadow || "${GATEWAY_RATE_LIMITS_ENABLED:-true}" == false ]]; then
+		say "  skip  429 check: rate limits are in shadow mode or off in this shell"
+	else
+		# A fresh client IP each run (the gateway trusts X-Forwarded-For from localhost), on /auth/refresh, which has
+		# no side effects: the 'auth' bucket allows 30 at once, so one of the next 40 calls must be refused.
+		local ip="198.51.100.$((RANDOM % 254 + 1))" i
+		headers=""
+		for ((i = 0; i < 40; i++)); do
+			headers=$(curl -s -D - -o /dev/null --max-time 5 -X POST -H "X-Forwarded-For: $ip" -H 'Content-Type: application/json' \
+				-d '{}' $GW/api/v1/auth/refresh | tr -d '\r' || true)
+			[[ "$(printf '%s' "$headers" | awk 'NR==1{print $2}')" == 429 ]] && break
+		done
+		check "40 quick sign-in calls from one IP: 429" 429 "$(printf '%s' "$headers" | awk 'NR==1{print $2}')"
+		check "  with Retry-After" yes "$(printf '%s' "$headers" | awk -F': ' 'tolower($1)=="retry-after"{print "yes"}')"
+		check "  as problem+json, code gateway.rate-limited" gateway.rate-limited "$(code_of "$(curl -s --max-time 5 -X POST \
+			-H "X-Forwarded-For: $ip" -H 'Content-Type: application/json' -d '{}' $GW/api/v1/auth/refresh || true)")"
 	fi
 	if [[ -n "$(listening 3000)" ]]; then
 		say "Console:"

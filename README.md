@@ -86,8 +86,8 @@ set -a; source .env; set +a; ./mvnw spring-boot:run -pl core-app -Dspring-boot.r
 # Terminal 2: location-service
 set -a; source .env; set +a; ./mvnw spring-boot:run -pl location-service
 
-# Terminal 3: api-gateway (no .env needed: every setting has a local default, see Configuration)
-./mvnw spring-boot:run -pl api-gateway
+# Terminal 3: api-gateway (.env for REDIS_PASSWORD: without it the rate limits fail open and limit nothing)
+set -a; source .env; set +a; ./mvnw spring-boot:run -pl api-gateway
 
 # Terminal 4: web console
 cd web-console && npm run dev
@@ -117,6 +117,10 @@ volumes.
 - *"Port 8080 was already in use"*: a previous run is still going: `lsof -nP -iTCP:8080 -sTCP:LISTEN`.
 - `npm run dev` says port 3000 is in use and picks 3001: the Dockerised console is running; `docker compose stop web-console`.
 - api-gateway answers 503 `gateway.upstream-unavailable`: core-app or location-service is not running.
+- api-gateway logs *"Rate limits are not applied (Redis unavailable, requests pass)"*: Redis is down or the gateway
+  was started without `.env` (no `REDIS_PASSWORD`). Requests still work; nothing is limited.
+- api-gateway answers 429 `gateway.rate-limited`: a rate limit (`gateway.rate-limits` in its `application.yml`);
+  wait `Retry-After` seconds, or start it with `GATEWAY_RATE_LIMITS_ENABLED=false` while testing.
 - Integration tests (`./mvnw verify`) need Docker running, not `docker compose up`.
 
 ## Configuration
@@ -147,6 +151,7 @@ API docs on. For any environment other than `local`, set these variables:
 | `SERVER_PORT` | HTTP port (default 8080 core-app, 8081 location-service, 8090 api-gateway) |
 | `CORE_APP_URL`, `LOCATION_SERVICE_URL` | api-gateway: where it routes (default `http://localhost:8080`, `http://localhost:8081`) |
 | `GATEWAY_RESPONSE_TIMEOUT`, `GATEWAY_CONNECT_TIMEOUT_MS` | api-gateway: backend timeouts (default `30s`, `2000`) |
+| `GATEWAY_RATE_LIMITS_ENABLED`, `GATEWAY_RATE_LIMITS_MODE` | api-gateway: Redis token-bucket rate limits per IP or user (policies in its `application.yml`; 429 problem+json with `Retry-After`). Default `true`, `enforce`; `shadow` only logs *"Rate limit '<policy>' would refuse ..."* (staging starts in shadow). Fails open: with Redis down requests pass. Uses `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` |
 
 Generate JWT keys (`*.pem` is git-ignored):
 ```bash

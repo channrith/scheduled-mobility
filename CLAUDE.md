@@ -13,9 +13,9 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - **Modular monolith** in Spring Boot. Do NOT create microservices.
   Separate deployables: `location-service` (WebSocket + driver GPS pings) and `api-gateway`.
 - **`api-gateway`** (Spring Cloud Gateway, WebFlux) is the single public API host: routing, request IDs
-  (`X-Request-Id`, logged as `request.id` by every service), header hygiene and edge errors; later the JWT
-  pre-check, rate limits and partner clients. **No business logic and no database in the gateway**; permission
-  rules stay in the services (`@PreAuthorize`), which keep checking JWTs themselves.
+  (`X-Request-Id`, logged as `request.id` by every service), header hygiene, edge errors and rate limits (Redis
+  token buckets per IP or user, `enforce|shadow`, fail open; per-phone OTP limits stay in identity); later the JWT
+  pre-check and partner clients. **No business logic and no database in the gateway**; permission rules stay in the services (`@PreAuthorize`), which keep checking JWTs themselves.
 - **`platform-security`** is a shared library (not a deployable): how every service verifies core-app's access
   tokens (keys from core-app's JWKS `/.well-known/jwks.json` or a PEM key; issuer, 30 s skew, `roles` → `ROLE_*`)
   and logs request IDs (auto-configured in servlet services). Use it in any new service; never copy that code.
@@ -93,7 +93,8 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 - Spring Boot does not read `.env`: export it in each terminal (location-service needs it for Redis). JWT key files
   are optional locally: location-service and the gateway fetch core-app's keys from its JWKS on :8080, so core-app
   must be running. Full local setup in README "Run locally".
-- Run gateway: `./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080, location-service :8081)
+- Run gateway: `set -a; source .env; set +a; ./mvnw spring-boot:run -pl api-gateway` (port 8090 → core-app :8080,
+  location-service :8081; `.env` for Redis: without it the rate limits fail open and limit nothing)
 - Web console: `cd web-console && npm run dev`
 - Whole local stack: `scripts/dev.sh up [--console]` · `smoke` · `status` · `logs <service>` · `down` (stops only what it started)
 - Before suggesting a commit: `scripts/check.sh` (`--fast` skips integration tests); it is what CI runs plus the repo's pitfalls

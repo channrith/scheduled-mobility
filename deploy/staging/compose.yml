@@ -130,15 +130,24 @@ services:
       LOCATION_SERVICE_URL: http://location-service:8081
       # Checks tokens with core-app's public keys from its JWKS (internal network only; never routed publicly).
       JWT_JWKS_URI: http://core-app:8080/.well-known/jwks.json
+      # Rate-limit buckets (phase 3). Fail open: with Redis down requests pass, and readiness ignores Redis.
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+      # shadow = only log "would refuse"; set enforce in .env once the numbers have been checked on real traffic.
+      GATEWAY_RATE_LIMITS_MODE: ${GATEWAY_RATE_LIMITS_MODE:-shadow}
       JAVA_TOOL_OPTIONS: ${API_GATEWAY_JAVA_OPTS:--XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError}
+    # Started, not healthy: a Redis that fails its health check must not keep the API host from starting.
+    depends_on:
+      redis:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8090/actuator/health/readiness"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
-    # Measured ~185 MiB in use under load; 192m is too tight.
-    mem_limit: ${API_GATEWAY_MEM_LIMIT:-256m}
+    # ~185 MiB before rate limits; with the Redis client a 200-request burst peaked at ~234 MiB (2026-11-09).
+    mem_limit: ${API_GATEWAY_MEM_LIMIT:-288m}
     logging: *logging
 
   # Admin web console (Next.js). Tokens stay in its httpOnly cookies; the browser only talks to the

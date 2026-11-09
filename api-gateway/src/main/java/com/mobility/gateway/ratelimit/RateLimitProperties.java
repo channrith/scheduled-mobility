@@ -11,14 +11,28 @@ import org.springframework.http.HttpMethod;
  * Rate limits at the edge (phase 3), one token bucket per policy and key, kept in Redis.
  *
  * @param enabled false turns every limit off (tests that don't run Redis)
+ * @param mode {@link Mode#ENFORCE} refuses requests over a limit; {@link Mode#SHADOW} only logs them, to check the
+ *        numbers against real traffic before enforcing
  * @param redisTimeout longest wait for Redis per request; past it (or if Redis is down) the request goes through
  * @param keyPrefix prefix of the bucket keys in Redis
  * @param policies checked in order; the first that matches a request decides, and a request no policy matches is
  *        not limited
  */
 @ConfigurationProperties("gateway.rate-limits")
-public record RateLimitProperties(@DefaultValue("true") boolean enabled, @DefaultValue("100ms") Duration redisTimeout,
-		@DefaultValue("rl:") String keyPrefix, @DefaultValue List<Policy> policies) {
+public record RateLimitProperties(@DefaultValue("true") boolean enabled, @DefaultValue("enforce") Mode mode,
+		@DefaultValue("100ms") Duration redisTimeout, @DefaultValue("rl:") String keyPrefix,
+		@DefaultValue List<Policy> policies) {
+
+	/** What happens to a request over its limit. */
+	public enum Mode {
+
+		/** 429 problem+json with {@code Retry-After}; the request never reaches a backend. */
+		ENFORCE,
+
+		/** Logged as "would refuse" and passed through unchanged (buckets are still counted in Redis). */
+		SHADOW
+
+	}
 
 	/** Whose bucket a request takes a token from. */
 	public enum Key {

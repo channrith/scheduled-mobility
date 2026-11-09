@@ -195,8 +195,15 @@ first add the new column and write both, then drop the old one in a later releas
 **Reset all staging data** (database, Redis, RabbitMQ, documents, certificates): `docker compose down -v`,
 then deploy again. On the next start the admin is bootstrapped again. This cannot be undone.
 
+**Rate limits** (api-gateway, Redis token buckets per IP or user): `GATEWAY_RATE_LIMITS_MODE` in `.env`,
+`shadow` by default here: requests over a limit are only logged. Check before switching to `enforce`:
+`docker compose logs api-gateway | grep "would refuse"` shows which policy (`auth`, `quotes`, `pings`, ...) real
+traffic would hit; raise a number in `api-gateway/src/main/resources/application.yml` if legitimate users show up
+there. Then set `GATEWAY_RATE_LIMITS_MODE=enforce` and `docker compose up -d api-gateway`. With Redis down the
+limits fail open (a WARN at most once a minute) and the API keeps working.
+
 **Memory on 2 GB:** the limits add up to about 2.4 GB on purpose; actual use is about 1.1 GB (api-gateway ~190 MB
-of its 256 MB), and swap covers peaks. The console's 256 MB is sized for uploads: two maximum-size two-sided uploads at once peaked at about
+of its 288 MB, ~234 MB in a burst with rate limits), and swap covers peaks. The console's 256 MB is sized for uploads: two maximum-size two-sided uploads at once peaked at about
 200 MB. If containers restart with `Exited (137)` or swap stays busy, resize.
 
 **Resize to 4 GB:** power off, resize in DigitalOcean (CPU and RAM only, so it can be resized back), power

@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.mobility.gateway.edge.RequestIdFilter;
 import com.mobility.gateway.error.EdgeProblems;
 import com.mobility.gateway.ratelimit.RateLimitProperties.Key;
+import com.mobility.gateway.ratelimit.RateLimitProperties.Mode;
 import com.mobility.gateway.ratelimit.RateLimitProperties.Policy;
 import com.mobility.platform.security.RequestIds;
 import org.slf4j.Logger;
@@ -31,7 +32,7 @@ import reactor.core.publisher.Mono;
  * from the caller's bucket; with none left the answer is 429 problem+json {@code gateway.rate-limited} with
  * {@code Retry-After}, and the request never reaches a backend. Fails open: when Redis is down or slower than
  * {@code gateway.rate-limits.redis-timeout}, the request goes through (and a warning is logged at most once a
- * minute).
+ * minute). In {@code shadow} mode a request over the limit is only logged ("would refuse") and goes through.
  */
 @Component
 @Order(0) // after Spring Security's WebFilterChainProxy (-100)
@@ -54,6 +55,8 @@ class RateLimitFilter implements WebFilter {
 
 	private final boolean enabled;
 
+	private final boolean shadow;
+
 	private final Duration redisTimeout;
 
 	private final List<CompiledPolicy> policies;
@@ -68,6 +71,7 @@ class RateLimitFilter implements WebFilter {
 
 	RateLimitFilter(RateLimitProperties properties, TokenBuckets buckets, ClientIp clientIp, EdgeProblems problems) {
 		this.enabled = properties.enabled();
+		this.shadow = properties.mode() == Mode.SHADOW;
 		this.redisTimeout = properties.redisTimeout();
 		this.policies = properties.policies().stream()
 			.map(policy -> new CompiledPolicy(policy,
@@ -98,7 +102,16 @@ class RateLimitFilter implements WebFilter {
 					warnFailOpen(policy, error);
 					return Mono.just(TokenBuckets.Decision.ALLOWED);
 				}))
-			.flatMap(decision -> decision.allowed() ? chain.filter(exchange) : refuse(exchange, policy, decision));
+			.flatMap(decision -> {
+				if (decision.allowed()) {
+					return chain.filter(exchange);
+				}
+				if (shadow) {
+					logOverLimit(exchange, policy, "Rate limit '{}' would refuse {} {} (shadow mode, passed)");
+					return chain.filter(exchange);
+				}
+				return refuse(exchange, policy, decision);
+			});
 	}
 
 	private Mono<String> caller(ServerWebExchange exchange, Key key) {
@@ -111,13 +124,17 @@ class RateLimitFilter implements WebFilter {
 
 	private Mono<Void> refuse(ServerWebExchange exchange, Policy policy, TokenBuckets.Decision decision) {
 		long seconds = Math.max(1, (decision.retryAfter().toMillis() + 999) / 1000);
+		logOverLimit(exchange, policy, "Rate limit '{}' reached for {} {}");
+		exchange.getResponse().getHeaders().set(HttpHeaders.RETRY_AFTER, Long.toString(seconds));
+		return problems.write(exchange, HttpStatus.TOO_MANY_REQUESTS, "gateway.rate-limited");
+	}
+
+	private void logOverLimit(ServerWebExchange exchange, Policy policy, String message) {
 		log.atInfo()
 			.addKeyValue(RequestIds.LOG_KEY, RequestIdFilter.of(exchange))
 			.addKeyValue("rate_limit.policy", policy.id())
-			.log("Rate limit '{}' reached for {} {}", policy.id(), exchange.getRequest().getMethod().name(),
-					exchange.getRequest().getPath().value());
-		exchange.getResponse().getHeaders().set(HttpHeaders.RETRY_AFTER, Long.toString(seconds));
-		return problems.write(exchange, HttpStatus.TOO_MANY_REQUESTS, "gateway.rate-limited");
+			.addKeyValue("rate_limit.mode", shadow ? "shadow" : "enforce")
+			.log(message, policy.id(), exchange.getRequest().getMethod().name(), exchange.getRequest().getPath().value());
 	}
 
 	private void warnFailOpen(Policy policy, Throwable error) {

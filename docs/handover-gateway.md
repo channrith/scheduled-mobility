@@ -2,7 +2,7 @@
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
 Status: **gateway phase 1 committed, deployed to staging and verified** (commits `7b4d1d1`, `74aedc3`, `abd4720`).
-**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) committed `f97ff53` and verified locally by hand; step 2 (BFF forwards the client IP) built, not committed; then step 3 (deploy and docs). Read this file and `CLAUDE.md`;
+**Gateway phase 2 done and verified on staging** (section 10; decisions in section 2): `ec1b294`, `524248e`, `5c4c791`. **Phase 3, rate limits** (section 11): approved; step 1 (gateway limiter) committed `f97ff53` and verified locally by hand; step 2 (BFF forwards the client IP) committed `742edbc`; step 1b (shadow mode) and step 3 (staging Compose, smoke, docs) built and rehearsed 2026-11-09, **not committed yet**; next: commit, deploy (starts in shadow), read the shadow logs, then `enforce`. Per-phone gateway limit dropped 2026-11-09; identity OTP hardening proposed, not approved. Don't deploy anything after `742edbc` without the step 3 Compose change: staging's gateway would have no `REDIS_HOST`. Read this file and `CLAUDE.md`;
 earlier context is in `docs/handover-prompt5-booking.md` and the pricing and corporate handovers it links to.
 
 ---
@@ -251,7 +251,7 @@ Gateway health and unrouted 404s aren't limited.
 2. *BFF forwards the client IP.* The BFF passes the incoming `X-Forwarded-For` (set by Caddy) on every call to the
    gateway (proxy, OTP request/verify, refresh, logout); locally it falls back to nothing. Core-app and
    location-service then also see the real client IP from the console.
-   **Built (2026-11-08), not committed:** `clientIpHeaders()` in `web-console/src/lib/server/session.ts` passes the
+   **Done, `742edbc` (2026-11-08):** `clientIpHeaders()` in `web-console/src/lib/server/session.ts` passes the
    first `X-Forwarded-For` entry on every BFF call (`api/core/[...path]`, `api/auth/otp/request|verify`,
    `api/auth/logout`, `refreshTokens()`); no header locally means nothing is sent. The console shows the gateway's
    localized `detail`, so no new strings. On staging the console is reachable only through Caddy (no published port),
@@ -261,9 +261,36 @@ Gateway health and unrouted 404s aren't limited.
    gateway memory (raise to 288m if over ~220 MiB); `scripts/dev.sh smoke` checks one 429; README, CLAUDE.md, this
    handover. Verify on staging: 31 quick `otp/request` calls from one IP → 429 with `Retry-After`; console sign-in
    still works.
+   **Built 2026-11-09, not committed:** gateway gets `REDIS_HOST`, `REDIS_PASSWORD`, `GATEWAY_RATE_LIMITS_MODE`
+   (`${...:-shadow}`, so the droplet's `.env` needs no new key) and `depends_on: redis` **started, not healthy** (a
+   sick Redis must not keep the API host down); `API_GATEWAY_MEM_LIMIT` default and example 256m → **288m**. The
+   droplet's `.env` has no `API_GATEWAY_MEM_LIMIT` (checked 2026-11-09), so the 288m default applies on deploy.
+   `scripts/dev.sh` now loads `.env` for the gateway too (before, it had no Redis password, so local limits silently
+   failed open), and `smoke` checks one 429 on `/auth/refresh` from a random `X-Forwarded-For` (skipped in shadow).
+   README (run command, troubleshooting, settings), CLAUDE.md, `docs/staging.md` (shadow → enforce).
+   **Rehearsed** (deploy-rehearsal, real bundle, droplet-like `.env` without the new key): first deploy healthy in
+   2.5 min; through Caddy 200 quick calls from one IP all reached core-app, 164 logged "would refuse" (policy,
+   request id); Redis stopped → gateway healthy, requests pass with ~100 ms extra (the Redis timeout), WARN logged;
+   memory peak 234 MiB of 256 → raised to 288, then 231 MiB under 300 calls; redeploy recreated only the gateway.
+   Not rehearsed (deploy.sh unchanged): Caddyfile change, broken image, broken migration, restore.
+   **On staging after deploy:** `docker compose logs api-gateway | grep "would refuse"` over real use, console
+   sign-in, `docker stats`; then `GATEWAY_RATE_LIMITS_MODE=enforce` and check 31 `otp/request` calls → 429.
 
 **Commits:** `feat(gateway): Redis token-bucket rate limits with 429 problem+json` ·
 `fix(console): forward the client IP to the gateway` · `chore(deploy): Redis for the gateway; rate-limit docs`.
 
-**Open questions for the user:** the numbers above; fail-open vs fail-closed; whether auth needs a second, tighter
-key (per phone number) at the edge (I'd say no: identity already does that).
+**Decided by the user (2026-11-09):** limits stay **fail-open** when Redis is down. **No per-phone limit at the
+gateway** (first decided, then dropped the same day): identity already limits OTPs per phone whatever the IP, and
+reading bodies plus a copy of `PhoneNumbers` in the gateway isn't worth it. Still open: the numbers.
+
+**Step 1b, shadow mode (approved 2026-11-09; built, not committed):**
+- *Shadow mode:* `gateway.rate-limits.mode: enforce|shadow`; shadow logs "would have refused" (policy,
+  path, request id) without a 429, so the numbers can be checked against real staging traffic before enforcing.
+  Built: `RateLimitProperties.Mode` (`GATEWAY_RATE_LIMITS_MODE`, default `enforce`), log fields `rate_limit.policy`
+  and `rate_limit.mode`; buckets are still counted in shadow. Test: `RateLimitShadowIT`.
+
+**Proposed, waiting for approval:**
+- *Identity, own small step (not gateway):* the real sign-in gap is guessing codes: 4-digit codes, 5 tries per
+  code, 5 codes per hour = 25 guesses per hour per phone (~6% per day of sustained guessing). Fix: 6-digit codes
+  (`identity.otp.code-length`, check the SMS template) and optionally a cap on failed verifies per phone across
+  codes (e.g. 10 per hour) in `OtpService`, with the existing localized `otp.*` errors.
