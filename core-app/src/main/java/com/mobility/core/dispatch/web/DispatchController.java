@@ -188,7 +188,7 @@ class DispatchController {
 
 	@Operation(summary = "Assign or reassign the driver (and backup)",
 			description = "Needs a `reasonCode` (OTHER also a `note`) and the trip version you saw. Airport and corporate rides "
-					+ "need a `backupDriverId`. Returns warnings (no shift, overlapping trip) that do not block.")
+					+ "need a `backupDriverId`. Missing shifts produce warnings; conflicting primary or backup reservations return 409.")
 	@PostMapping("/trips/{tripId}/assign")
 	AssignmentResultView assign(@PathVariable UUID tripId, @Valid @RequestBody AssignTripRequest request) {
 		return result(assignments.assign(tripId, request.driverId(), request.backupDriverId(), request.reasonCode(),

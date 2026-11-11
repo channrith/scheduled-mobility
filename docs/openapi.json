@@ -36,6 +36,19 @@
         "required" : [ "items" ],
         "type" : "object"
       },
+      "Access" : {
+        "properties" : {
+          "driverId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "tripId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AccountDetail" : {
         "properties" : {
           "account" : {
@@ -256,7 +269,7 @@
             "type" : "string"
           },
           "reasonCode" : {
-            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "enum" : [ "AUTO_ASSIGNED", "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
             "type" : "string"
           },
           "tripVersion" : {
@@ -310,7 +323,7 @@
             "type" : "string"
           },
           "reasonCode" : {
-            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "enum" : [ "AUTO_ASSIGNED", "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
             "type" : "string"
           },
           "role" : {
@@ -393,6 +406,67 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "Availability" : {
+        "properties" : {
+          "airportZoneId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "available" : {
+            "type" : "boolean"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "dropoffZoneTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "pickupZoneTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "reasons" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Reason"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "AvailabilityRequest" : {
+        "properties" : {
+          "dropoff" : {
+            "$ref" : "#/components/schemas/Pin"
+          },
+          "fareModel" : {
+            "enum" : [ "QUOTED", "METERED" ],
+            "type" : "string"
+          },
+          "pickup" : {
+            "$ref" : "#/components/schemas/Pin"
+          },
+          "pickupAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "SCHEDULED", "AIRPORT", "RECURRING", "ON_DEMAND" ],
+            "type" : "string"
+          },
+          "vehicleClass" : {
+            "enum" : [ "MOTO", "TUKTUK_REMORK", "TUKTUK_RICKSHAW", "CAR", "SUV", "VAN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "fareModel", "pickup", "type", "vehicleClass" ],
         "type" : "object"
       },
       "AvailabilityResponse" : {
@@ -555,6 +629,10 @@
           "dropoff" : {
             "$ref" : "#/components/schemas/LocationRequest"
           },
+          "fareModel" : {
+            "enum" : [ "QUOTED", "METERED" ],
+            "type" : "string"
+          },
           "pickup" : {
             "$ref" : "#/components/schemas/LocationRequest"
           },
@@ -572,8 +650,19 @@
       },
       "CreateRideRequest" : {
         "properties" : {
+          "contractVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "costCenterId" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "dropoff" : {
+            "$ref" : "#/components/schemas/Pickup"
+          },
+          "fareModel" : {
+            "enum" : [ "QUOTED", "METERED" ],
             "type" : "string"
           },
           "flightNo" : {
@@ -581,8 +670,20 @@
             "minLength" : 0,
             "type" : "string"
           },
+          "meetingPoint" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "paymentMethod" : {
             "enum" : [ "CASH", "KHQR", "CORPORATE_INVOICE" ],
+            "type" : "string"
+          },
+          "pickup" : {
+            "$ref" : "#/components/schemas/Pickup"
+          },
+          "pickupAt" : {
+            "format" : "date-time",
             "type" : "string"
           },
           "pickupNotes" : {
@@ -609,9 +710,13 @@
           "type" : {
             "enum" : [ "SCHEDULED", "AIRPORT", "RECURRING", "ON_DEMAND" ],
             "type" : "string"
+          },
+          "vehicleClass" : {
+            "enum" : [ "MOTO", "TUKTUK_REMORK", "TUKTUK_RICKSHAW", "CAR", "SUV", "VAN" ],
+            "type" : "string"
           }
         },
-        "required" : [ "paymentMethod", "quoteId" ],
+        "required" : [ "paymentMethod" ],
         "type" : "object"
       },
       "DaySuggestionsView" : {
@@ -677,7 +782,7 @@
             "type" : "string"
           },
           "reasonCode" : {
-            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "enum" : [ "AUTO_ASSIGNED", "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
             "type" : "string"
           },
           "riskEvaluatedAt" : {
@@ -1136,6 +1241,21 @@
         },
         "type" : "object"
       },
+      "Geometry" : {
+        "properties" : {
+          "encodedPolyline" : {
+            "type" : "string"
+          },
+          "encoding" : {
+            "type" : "string"
+          },
+          "precision" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "HistoryEntryView" : {
         "properties" : {
           "effectiveUntil" : {
@@ -1360,6 +1480,19 @@
         "required" : [ "intoPlaceId" ],
         "type" : "object"
       },
+      "Mode" : {
+        "properties" : {
+          "fareModel" : {
+            "enum" : [ "QUOTED", "METERED" ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "SCHEDULED", "AIRPORT", "RECURRING", "ON_DEMAND" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Money" : {
         "properties" : {
           "amountMinor" : {
@@ -1390,6 +1523,35 @@
             "type" : "boolean"
           },
           "reason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Options" : {
+        "properties" : {
+          "combinations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Mode"
+            },
+            "type" : "array"
+          },
+          "maximumScheduleDays" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "minimumScheduleNoticeSeconds" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "modes" : {
+            "items" : {
+              "enum" : [ "SCHEDULED", "AIRPORT", "RECURRING", "ON_DEMAND" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "timezone" : {
             "type" : "string"
           }
         },
@@ -1606,11 +1768,51 @@
         },
         "type" : "object"
       },
+      "Pickup" : {
+        "properties" : {
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "placeId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Pin" : {
+        "properties" : {
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "placeId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "PlaceHit" : {
         "properties" : {
           "distanceMeters" : {
             "format" : "double",
             "type" : "number"
+          },
+          "formattedAddressEn" : {
+            "type" : [ "string", "null" ]
+          },
+          "formattedAddressKm" : {
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "uuid",
@@ -1652,6 +1854,16 @@
       },
       "PlaceRequest" : {
         "properties" : {
+          "formattedAddressEn" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "formattedAddressKm" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "latitude" : {
             "format" : "double",
             "type" : "number"
@@ -1729,6 +1941,12 @@
       },
       "PlaceView" : {
         "properties" : {
+          "formattedAddressEn" : {
+            "type" : "string"
+          },
+          "formattedAddressKm" : {
+            "type" : "string"
+          },
           "id" : {
             "format" : "uuid",
             "type" : "string"
@@ -1939,6 +2157,14 @@
             "format" : "date-time",
             "type" : "string"
           },
+          "route" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Geometry"
+            }, {
+              "type" : "null"
+            } ],
+            "description" : "Immutable priced route geometry; null for straight-line or older quotes"
+          },
           "routingSource" : {
             "enum" : [ "OSRM", "STRAIGHT_LINE" ],
             "type" : "string"
@@ -1989,6 +2215,23 @@
               "type" : "string"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "Reason" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "end" : {
+            "type" : "string"
+          },
+          "field" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -2122,6 +2365,35 @@
         "required" : [ "city", "vehicleClass" ],
         "type" : "object"
       },
+      "ReversePlaceResult" : {
+        "properties" : {
+          "formattedAddress" : {
+            "type" : [ "string", "null" ]
+          },
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "name" : {
+            "type" : [ "string", "null" ]
+          },
+          "pickupInstructions" : {
+            "type" : [ "string", "null" ]
+          },
+          "placeId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "resolved" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
       "RidePointView" : {
         "properties" : {
           "latitude" : {
@@ -2181,11 +2453,21 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "fareModel" : {
+            "enum" : [ "QUOTED", "METERED" ],
+            "type" : "string"
+          },
+          "fareStatus" : {
+            "type" : "string"
+          },
           "flightNo" : {
             "type" : "string"
           },
           "id" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "meetingPoint" : {
             "type" : "string"
           },
           "paymentMethod" : {
@@ -2359,6 +2641,27 @@
         },
         "type" : "object"
       },
+      "Sample" : {
+        "properties" : {
+          "accuracyMeters" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "recordedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SavedRequest" : {
         "properties" : {
           "customLabel" : {
@@ -2455,7 +2758,7 @@
             "type" : "string"
           },
           "reasonCode" : {
-            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "enum" : [ "AUTO_ASSIGNED", "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
             "type" : "string"
           }
         },
@@ -2802,7 +3105,17 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "fareModel" : {
+            "enum" : [ "QUOTED", "METERED" ],
+            "type" : "string"
+          },
+          "fareStatus" : {
+            "type" : "string"
+          },
           "flightNo" : {
+            "type" : "string"
+          },
+          "meetingPoint" : {
             "type" : "string"
           },
           "paymentMethod" : {
@@ -2838,7 +3151,7 @@
             "type" : "string"
           },
           "reasonCode" : {
-            "enum" : [ "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
+            "enum" : [ "AUTO_ASSIGNED", "PLANNED", "SUGGESTION_ACCEPTED", "DRIVER_UNAVAILABLE", "DRIVER_LATE", "VEHICLE_ISSUE", "CUSTOMER_REQUEST", "REBALANCE", "BACKUP_SWITCH", "OTHER" ],
             "type" : "string"
           },
           "tripVersion" : {
@@ -2991,6 +3304,16 @@
       },
       "UpdatePlaceRequest" : {
         "properties" : {
+          "formattedAddressEn" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "formattedAddressKm" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "latitude" : {
             "format" : "double",
             "type" : "number"
@@ -8491,6 +8814,151 @@
         "tags" : [ "Auth" ]
       }
     },
+    "/api/v1/booking/availability" : {
+      "post" : {
+        "description" : "Side-effect-free policy preflight. No driver supply, fare or reservation guarantee. Quoted requires both endpoints; metered requires pickup only. Business rejection returns 200 available=false with existing reason codes; malformed shape is 400. Quote and booking revalidate. No routing provider calls.",
+        "operationId" : "check",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 255,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AvailabilityRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Availability"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Malformed request or booking.invalid-combination"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          },
+          "503" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "booking.availability-unavailable"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Check personal booking eligibility without creating a quote or booking",
+        "tags" : [ "booking-availability-controller" ]
+      }
+    },
+    "/api/v1/booking/options" : {
+      "get" : {
+        "description" : "CASH only. combinations is authoritative for fare availability; modes retains legacy quoted-type discovery. Immediate and metered rollout flags default off. No production meter or automatic matching guarantee.",
+        "operationId" : "options",
+        "parameters" : [ {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Options"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Enabled personal booking type and fare-model combinations",
+        "tags" : [ "booking-options-controller" ]
+      }
+    },
     "/api/v1/corporates/{corporateId}" : {
       "get" : {
         "description" : "**Roles:** ADMIN, SUPPORT, DISPATCHER, SAFETY_OFFICER",
@@ -10006,7 +10474,7 @@
     },
     "/api/v1/dispatch/trips/{tripId}/assign" : {
       "post" : {
-        "description" : "Needs a `reasonCode` (OTHER also a `note`) and the trip version you saw. Airport and corporate rides need a `backupDriverId`. Returns warnings (no shift, overlapping trip) that do not block.\n\n**Roles:** ADMIN, DISPATCHER",
+        "description" : "Needs a `reasonCode` (OTHER also a `note`) and the trip version you saw. Airport and corporate rides need a `backupDriverId`. Missing shifts produce warnings; conflicting primary or backup reservations return 409.\n\n**Roles:** ADMIN, DISPATCHER",
         "operationId" : "assign",
         "parameters" : [ {
           "in" : "path",
@@ -10561,6 +11029,100 @@
         "tags" : [ "Document previews" ]
       }
     },
+    "/api/v1/driver/meter/location" : {
+      "post" : {
+        "description" : "Requires Idempotency-Key. No active meter: no-op. Server validates timestamp, accuracy, continuity and speed; computes distance. The fare is finalized atomically with trip completion. Coverage gaps prevent completion and require operations assistance.\n\n**Roles:** DRIVER",
+        "operationId" : "sample",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Sample"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Invalid request (`code` explains why)"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Conflict: invalid state transition, duplicate or concurrent update (`code` explains which)"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "`idempotency.key-reused`: same Idempotency-Key, different body"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Submit a measured GPS sample to the driver's active meter",
+        "tags" : [ "driver-meter-controller" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
     "/api/v1/driver/shifts" : {
       "get" : {
         "description" : "From 12 hours ago on.\n\n**Roles:** DRIVER",
@@ -10883,6 +11445,78 @@
           "bearer-jwt" : [ ]
         } ],
         "summary" : "My upcoming trips",
+        "tags" : [ "Driver · Trips" ],
+        "x-required-roles" : [ "DRIVER" ]
+      }
+    },
+    "/api/v1/driver/trips/{tripId}" : {
+      "get" : {
+        "description" : "**Roles:** DRIVER",
+        "operationId" : "detail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TripWithRideView"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "My assigned trip including the authoritative fare and optional destination",
         "tags" : [ "Driver · Trips" ],
         "x-required-roles" : [ "DRIVER" ]
       }
@@ -13275,6 +13909,157 @@
         "x-required-roles" : [ "ADMIN", "DISPATCHER" ]
       }
     },
+    "/api/v1/passenger/trips/{tripId}/tracking-access" : {
+      "get" : {
+        "description" : "Rider or original booker only. Available while the driver is en route, at pickup or in progress. Rechecked by location-service before every socket delivery. No location is returned here.\n\n**Roles:** PASSENGER",
+        "operationId" : "access",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tripId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Access"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Authenticated, but not allowed (role or scope)"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Not found"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Authorize passenger live tracking",
+        "tags" : [ "Passenger tracking" ],
+        "x-required-roles" : [ "PASSENGER" ]
+      }
+    },
+    "/api/v1/places/reverse" : {
+      "get" : {
+        "description" : "Preserves selected coordinates. Internal placeId is returned only for an exact canonical landmark coordinate. No service eligibility guarantee. English/Khmer fallback. No result is 200 resolved=false; unavailable geocoder is 503.",
+        "operationId" : "reverse",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "lat",
+          "required" : true,
+          "schema" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        }, {
+          "in" : "query",
+          "name" : "lng",
+          "required" : true,
+          "schema" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        }, {
+          "description" : "Language of error messages and SMS: `km` (default) or `en`",
+          "in" : "header",
+          "name" : "Accept-Language",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "km", "en" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReversePlaceResult"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Missing, invalid or expired access token"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "places.geocoding-rate-limited; Retry-After in seconds"
+          },
+          "503" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "places.geocoding-unavailable"
+          }
+        },
+        "security" : [ {
+          "bearer-jwt" : [ ]
+        } ],
+        "summary" : "Label a selected map pin",
+        "tags" : [ "reverse-place-controller" ]
+      }
+    },
     "/api/v1/places/search" : {
       "get" : {
         "description" : "Fuzzy match on Khmer and English names (partial words and small typos). With `lat`/`lng`, nearer places rank higher and `distanceMeters` is returned. `limit` 1–30 (default 10).",
@@ -13355,7 +14140,7 @@
     },
     "/api/v1/quotes" : {
       "post" : {
-        "description" : "Pickup and drop-off as a landmark (`placeId`) or a map position. One end must be in our service area; the price is the version in force at `pickupAt` (default now): with `corporateId`, the company's override if it has one, else the city price. The quote is stored and never changes; it can be booked until `expiresAt`. `corporateId` needs staff or that company's admin/booker.",
+        "description" : "Pickup and drop-off as a landmark (`placeId`) or a map position. One end must be in our service area; the price is the version in force at `pickupAt` (default now): with `corporateId`, the company's override if it has one, else the city price. The quote is stored and never changes; it can be booked until `expiresAt`. fareModel defaults to QUOTED; METERED is not eligible for a route quote. `corporateId` needs staff or that company's admin/booker.",
         "operationId" : "create",
         "parameters" : [ {
           "description" : "Language of error messages and SMS: `km` (default) or `en`",
@@ -13577,7 +14362,7 @@
         "tags" : [ "Rides" ]
       },
       "post" : {
-        "description" : "Requires an `Idempotency-Key` header: a retry with the same key returns the first response. The quote must be yours and unexpired, and can be booked once. Fare, route and pickup time come from the quote. `type`: SCHEDULED (default), AIRPORT (`flightNo`; the quote must touch the airport zone) or RECURRING (`recurrence`: weekdays incl. the quote's own, `until` at most 90 days on; every trip at the quote's fare). Corporate quotes: `CORPORATE_INVOICE`, the member's booking policy is checked for every trip. `KHQR` is not available yet.",
+        "description" : "BookingType remains SCHEDULED, AIRPORT, RECURRING or ON_DEMAND. fareModel defaults to QUOTED for legacy callers; METERED must be explicit. QUOTED requires an owned, unexpired, unused quoteId; route, vehicle and time come from that quote, not direct overrides. ON_DEMAND requires a NOW quote and omits pickupAt/flight; SCHEDULED and AIRPORT require a future scheduled quote. METERED permits only ON_DEMAND or AIRPORT, requires pickup and vehicleClass, forbids quoteId/destination, and keeps fare pending until backend meter completion. Metered AIRPORT requires future pickupAt, flightNo and meetingPoint. Explicit fareModel or contractVersion=2 also requires quoted AIRPORT pickup in an airport zone and meetingPoint; legacy airport transfers remain compatible. RECURRING preserves weekdays/until (90 days) and QUOTED pricing. Idempotency-Key is required. Personal payment is CASH; corporate quoted rides use CORPORATE_INVOICE; KHQR is unavailable. ON_DEMAND and METERED each require their default-off backend feature configuration; no automatic driver matching or production meter readiness is implied.",
         "operationId" : "book",
         "parameters" : [ {
           "in" : "header",
@@ -13625,7 +14410,7 @@
                 }
               }
             },
-            "description" : "Invalid request (`code` explains why)"
+            "description" : "booking.invalid-combination with field context for incompatible type, fare model, route or timing fields; booking.invalid-field for missing required data"
           },
           "401" : {
             "content" : {
@@ -13661,7 +14446,7 @@
         "security" : [ {
           "bearer-jwt" : [ ]
         } ],
-        "summary" : "Book a ride from a quote",
+        "summary" : "Book a quoted or metered ride",
         "tags" : [ "Rides" ]
       }
     },

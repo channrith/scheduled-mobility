@@ -72,6 +72,23 @@ class LocalApprovedDriverSeedIT {
 			.get().extracting(Driver::getStatus).isEqualTo(DriverStatus.APPROVED);
 	}
 
+	@Test
+	void configurableFixtureCreatesAnIndependentApprovedDriverAndIsRepeatable() {
+		var environment = new MockEnvironment()
+			.withProperty("LOCAL_APPROVED_DRIVER_SEED_PHONE", "010555801");
+		environment.setActiveProfiles("local");
+		var fixture = new LocalApprovedDriverSeed(true, environment, transactions, jdbc, accounts, drivers,
+				onboarding, documents, vehicles, readiness, clock);
+		fixture.run(null);
+		UUID id = jdbc.queryForObject("SELECT id FROM driver.drivers WHERE phone_e164 = '+85510555801'", UUID.class);
+		assertThat(readiness.forDispatch(id).allApprovedAndValid()).isTrue();
+		assertThat(vehicles.activeVehicle(id)).isPresent()
+			.get().extracting(v -> v.plateNumber()).isEqualTo("LOCAL-SEED-010555801");
+		var before = snapshot(id);
+		fixture.run(null);
+		assertThat(snapshot(id)).isEqualTo(before);
+	}
+
 	private List<?> snapshot(UUID driverId) {
 		return List.of(jdbc.queryForList("SELECT * FROM driver.drivers WHERE id = ?", driverId),
 				jdbc.queryForList("SELECT * FROM driver.driver_documents WHERE driver_id = ? ORDER BY id", driverId),

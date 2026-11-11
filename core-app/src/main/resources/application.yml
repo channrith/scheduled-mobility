@@ -121,3 +121,26 @@ management:
     health:
       probes:
         enabled: true
+
+# Enable after the driver meter uploader and nullable-fare clients are rolled out.
+booking:
+  on-demand-enabled: ${BOOKING_ON_DEMAND_ENABLED:false}
+  metered-enabled: ${BOOKING_METERED_ENABLED:false}
+
+# Explicit provider endpoint, e.g. your self-hosted Nominatim /reverse URL.
+# Empty means non-catalog pins return 503; no public provider is contacted implicitly.
+places:
+  geocoding:
+    reverse-url: ${GEOCODING_REVERSE_URL:}
+    timeout: ${GEOCODING_TIMEOUT:3s}
+
+# Start with ingestion enabled; enable assignment only after shifts and backup coverage are ready.
+dispatch:
+  automatic:
+    enabled: ${DISPATCH_AUTOMATIC_ENABLED:false}
+    listener-enabled: ${DISPATCH_AUTOMATIC_LISTENER_ENABLED:true}
+    poll-interval: 5s
+    retry-delay: 1m
+    max-attempts: 60
+    horizon: 7d
+    batch-size: 20

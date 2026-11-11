@@ -113,15 +113,20 @@ class LocalApprovedDriverSeed implements ApplicationRunner {
 			return;
 		}
 		requireLocalProfile(environment);
-		UUID driverId = transactions.execute(status -> seed());
+		String phone = environment.getProperty("LOCAL_APPROVED_DRIVER_SEED_PHONE", PHONE);
+		if (!phone.matches("0[1-9][0-9]{7,8}")) {
+			throw new IllegalArgumentException("Local seed phone must use Cambodian national format");
+		}
+		String plate = phone.equals(PHONE) ? PLATE : "LOCAL-SEED-" + phone;
+		UUID driverId = transactions.execute(status -> seed(phone, plate));
 		log.warn("Local APPROVED driver fixture ready: driverId={}. Synthetic documents; local development only.",
 				driverId);
 	}
 
-	private UUID seed() {
+	private UUID seed(String phone, String plate) {
 		// Serialize concurrent local startups before looking up or creating any fixture records.
 		jdbc.queryForList("SELECT pg_advisory_xact_lock(?)", 12898339L);
-		var account = accounts.ensureUserWithRole(PHONE, "Local Test Driver 012898339", Role.DRIVER);
+		var account = accounts.ensureUserWithRole(phone, "Local Test Driver " + phone, Role.DRIVER);
 		var previous = SecurityContextHolder.getContext();
 		var context = SecurityContextHolder.createEmptyContext();
 		// Startup-only audit/reviewer identity: never exposed as an access token or used by HTTP security.
@@ -134,13 +139,13 @@ class LocalApprovedDriverSeed implements ApplicationRunner {
 		try {
 			SecurityContextHolder.setContext(context);
 			Driver driver = drivers.findByUserId(account.userId()).orElseGet(() -> onboarding.register(
-					new DriverOnboardingService.RegisterDriver(PHONE, "Local Test Driver 012898339", null, null,
+					new DriverOnboardingService.RegisterDriver(phone, "Local Test Driver " + phone, null, null,
 							HomeZone.SEN_SOK, Language.EN, null, null, null)));
 			if (driver.getStatus() == DriverStatus.REJECTED) {
 				throw new IllegalStateException("Local fixture driver is REJECTED; domain rules forbid reopening it");
 			}
 			UUID driverId = driver.getId();
-			VehicleView vehicle = vehicles.activeVehicle(driverId).orElseGet(() -> assignVehicle(driverId));
+			VehicleView vehicle = vehicles.activeVehicle(driverId).orElseGet(() -> assignVehicle(driverId, plate));
 			if (vehicle.status() != VehicleStatus.ACTIVE) {
 				throw new IllegalStateException("Local fixture's assigned vehicle must be ACTIVE");
 			}
@@ -170,10 +175,10 @@ class LocalApprovedDriverSeed implements ApplicationRunner {
 		}
 	}
 
-	private VehicleView assignVehicle(UUID driverId) {
-		VehicleView vehicle = vehicles.list(PLATE, null, null, 0, 100).getContent().stream()
-			.map(VehicleService.VehicleListItem::vehicle).filter(v -> PLATE.equals(v.plateNumber())).findFirst()
-			.orElseGet(() -> vehicles.register(new VehicleData(PLATE, VehicleClass.CAR, "Local", "Test fixture",
+	private VehicleView assignVehicle(UUID driverId, String plate) {
+		VehicleView vehicle = vehicles.list(plate, null, null, 0, 100).getContent().stream()
+			.map(VehicleService.VehicleListItem::vehicle).filter(v -> plate.equals(v.plateNumber())).findFirst()
+			.orElseGet(() -> vehicles.register(new VehicleData(plate, VehicleClass.CAR, "Local", "Test fixture",
 					"White", (short) 2024, (short) 4, VehicleOwnership.DRIVER, null, null)));
 		vehicles.assign(driverId, vehicle.id(), null, null);
 		return vehicle;

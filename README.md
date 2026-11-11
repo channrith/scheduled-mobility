@@ -219,8 +219,6 @@ API docs on. For any environment other than `local`, set these variables:
 | `STORAGE_LOCAL_DIR` | `local`: where uploaded documents are stored (default `./var/storage`, git-ignored) |
 | `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`, `STORAGE_S3_BUCKET`, `STORAGE_S3_ACCESS_KEY`, `STORAGE_S3_SECRET_KEY` | `s3`: any S3-compatible store, e.g. endpoint `https://sgp1.digitaloceanspaces.com`, region `sgp1`. Endpoint empty = AWS S3. The bucket must exist and be private |
 | `WEB_CONSOLE_ORIGINS` | Browser origins allowed by CORS (comma-separated). Local profile: `http://localhost:3000`; none elsewhere |
-| `JWT_JWKS_URI` | Location-service: core-app JWKS URL; set exactly one of this, inline public key, or a public key resource/file |
-| `JWT_PUBLIC_KEY_LOCATION` | Optional location-service public key resource (e.g. `file:/path/jwt-public.pem`); locally defaults to `JWT_PUBLIC_KEY_FILE`. Leave empty when using inline `JWT_PUBLIC_KEY` |
 | `JWT_ISSUER` | Shared token issuer for both backends (default `mobility-core`) |
 | `GATEWAY_SERVER_PORT` | Local launcher gateway port, default `8090` |
 | `LOCATION_EVENTS_CHANNEL`, `LOCATION_PRESENCE_TIMEOUT` | Redis event channel and presence TTL (default `60s`) |

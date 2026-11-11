@@ -37,6 +37,11 @@ class OpenApiSnapshotIT {
 	void committedSpecMatchesTheCode() throws Exception {
 		String json = client.get().uri("/v3/api-docs/all").exchange().expectStatus().isOk()
 			.expectBody(String.class).returnResult().getResponseBody();
+		var schemas = PRETTY.readTree(json).path("components").path("schemas");
+		var route = schemas.path("QuoteView").path("properties").path("route");
+		assertThat(route.path("anyOf").size()).isEqualTo(2);
+		assertThat(route.path("anyOf").path(0).path("$ref").asString()).isEqualTo("#/components/schemas/Geometry");
+		assertThat(route.path("anyOf").path(1).path("type").asString()).isEqualTo("null");
 		// Re-serialize with sorted keys and indentation for a stable, diff-friendly file.
 		String current = PRETTY.writeValueAsString(PRETTY.readValue(json, new TypeReference<Map<String, Object>>() {
 		})) + "\n";

@@ -57,7 +57,8 @@ class TripsService implements Trips {
 	@Override
 	@Transactional
 	public TripInfo assign(UUID tripId, UUID driverId, long expectedVersion, UUID actorUserId, String reason) {
-		Trip trip = trips.assign(tripId, driverId, expectedVersion, new Actor(actorUserId, TripActor.OPS), reason);
+		TripActor role = actorUserId == null ? TripActor.SYSTEM : TripActor.OPS;
+		Trip trip = trips.assign(tripId, driverId, expectedVersion, new Actor(actorUserId, role), reason);
 		return info(trip, rides.findById(trip.getRideId()).orElseThrow());
 	}
 

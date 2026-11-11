@@ -4,7 +4,7 @@
 A scheduled & contracted mobility platform for Phnom Penh, Cambodia.
 The MVP serves **corporate clients** (NGOs, banks, embassies, BPOs) and **hotels** with
 **scheduled rides and airport transfers** (Techo International Airport, ~30 km from the city).
-It is NOT a Grab clone. On-demand rides come later.
+It is NOT a Grab clone. The authorized 2026-11-01 local increment adds quoted on-demand and destination-free metered booking modes; see docs/phase2-booking-contract.md for the reconciled four-value BookingType, separate FareModel and default-off rollout gates. This does not claim deployment.
 
 Core idea: reliability. Every scheduled trip has an assigned driver and (for SLA trips) a backup
 driver. A human dispatcher supervises the dispatch engine and handles exceptions.
@@ -26,7 +26,7 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
   `payment`, `notification`, `safety`, `support`, `audit`.
 - One PostgreSQL database, **one schema per module** (e.g. `identity.users`, `booking.trips`).
 - Events: **transactional outbox** table → relay → RabbitMQ. No Kafka yet.
-- Live driver state and locations live in **Redis** (GEO + hashes), never polled from Postgres.
+- Live driver state and locations live in **Redis** (GEO + hashes), never polled from Postgres. The authorized metered-booking exception persists only its own pricing/meter aggregate and last measurement anchor in booking for transactional continuity; it is not a live-location polling store.
 
 ## Tech stack
 - Java 21, Spring Boot 4.x (latest stable), Maven wrapper
@@ -58,7 +58,7 @@ driver. A human dispatcher supervises the dispatch engine and handles exceptions
 ## Domain rules (important)
 - **Money**: store as `BIGINT` minor units + `CHAR(3)` currency (USD cents or KHR riel).
   Never use float/double for money. Show USD and KHR equivalents in quotes.
-- **Fares are fixed at quote time.** A stored `fare_quote` is immutable and is the final fare.
+- **Quoted fares are fixed at quote time.** A stored `fare_quote` is immutable and is the final fare for quoted rides. Metered rides have no route quote or destination and no fare until backend finalization from accepted trip measurements and stored pricing terms. Never substitute zero money, invented distance or a dummy destination. Metered production availability is explicitly gated; see `docs/handover-booking-modes.md`.
 - **Commission** to drivers is configurable, default 12%, and must never exceed 15%.
 - **Promotions are never funded by drivers.** `funded_by` cannot be `DRIVER`.
 - **No stored-value wallet.** We do not hold customer funds (licensing reasons).

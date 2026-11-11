@@ -43,12 +43,12 @@ class PlaceController {
 
 	record PlaceView(UUID id, String nameKm, String nameEn, double latitude, double longitude, PlaceType type,
 			String pickupNotesKm, String pickupNotesEn, long usageCount, boolean verified, PlaceStatus status,
-			UUID mergedInto, Instant updatedAt, Long version) {
+			UUID mergedInto, Instant updatedAt, Long version, String formattedAddressEn, String formattedAddressKm) {
 
 		static PlaceView of(Place p) {
 			return new PlaceView(p.getId(), p.getNameKm(), p.getNameEn(), p.getLatitude(), p.getLongitude(), p.getType(),
 					p.getPickupNotesKm(), p.getPickupNotesEn(), p.getUsageCount(), p.isVerified(), p.getStatus(),
-					p.getMergedInto(), p.getUpdatedAt(), p.getVersion());
+					p.getMergedInto(), p.getUpdatedAt(), p.getVersion(), p.getFormattedAddressEn(), p.getFormattedAddressKm());
 		}
 	}
 
@@ -61,7 +61,9 @@ class PlaceController {
 		if (q.isBlank() || (lat == null) != (lng == null)) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "validation");
 		}
-		return search.search(q, lat, lng, limit);
+		if (lat != null && (!Double.isFinite(lat) || !Double.isFinite(lng) || Math.abs(lat)>90 || Math.abs(lng)>180))
+            throw new ApiException(HttpStatus.BAD_REQUEST, "validation");
+        return search.search(q, lat, lng, limit);
 	}
 
 	@Operation(summary = "List places (admin)", description = "Active places by name; filter `verified=false` to find pins still to check.")
@@ -105,19 +107,19 @@ class PlaceController {
 
 	record PlaceRequest(@Size(max = 200) String nameKm, @Size(max = 200) String nameEn, @NotNull Double latitude,
 			@NotNull Double longitude, @NotNull PlaceType type, @Size(max = 1000) String pickupNotesKm,
-			@Size(max = 1000) String pickupNotesEn, Boolean verified) {
+			@Size(max = 1000) String pickupNotesEn, Boolean verified, @Size(max = 500) String formattedAddressEn, @Size(max = 500) String formattedAddressKm) {
 
 		PlaceInput input() {
-			return new PlaceInput(nameKm, nameEn, latitude, longitude, type, pickupNotesKm, pickupNotesEn, verified);
+			return new PlaceInput(nameKm, nameEn, latitude, longitude, type, pickupNotesKm, pickupNotesEn, verified, formattedAddressEn, formattedAddressKm);
 		}
 	}
 
 	record UpdatePlaceRequest(@NotNull Long version, @Size(max = 200) String nameKm, @Size(max = 200) String nameEn,
 			@NotNull Double latitude, @NotNull Double longitude, @NotNull PlaceType type,
-			@Size(max = 1000) String pickupNotesKm, @Size(max = 1000) String pickupNotesEn, Boolean verified) {
+			@Size(max = 1000) String pickupNotesKm, @Size(max = 1000) String pickupNotesEn, Boolean verified, @Size(max = 500) String formattedAddressEn, @Size(max = 500) String formattedAddressKm) {
 
 		PlaceInput input() {
-			return new PlaceInput(nameKm, nameEn, latitude, longitude, type, pickupNotesKm, pickupNotesEn, verified);
+			return new PlaceInput(nameKm, nameEn, latitude, longitude, type, pickupNotesKm, pickupNotesEn, verified, formattedAddressEn, formattedAddressKm);
 		}
 	}
 

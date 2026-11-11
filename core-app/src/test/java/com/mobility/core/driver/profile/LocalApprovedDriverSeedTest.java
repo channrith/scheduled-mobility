@@ -41,6 +41,15 @@ class LocalApprovedDriverSeedTest {
 		assertThatCode(() -> seed(true, environment)).doesNotThrowAnyException();
 	}
 
+	@Test
+	void rejectsMalformedFixturePhoneBeforeWriting() {
+		var environment = new MockEnvironment()
+			.withProperty("LOCAL_APPROVED_DRIVER_SEED_PHONE", "not-a-phone");
+		environment.setActiveProfiles("local");
+		assertThatThrownBy(() -> seed(true, environment).run(null))
+			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("national format");
+	}
+
 	private LocalApprovedDriverSeed seed(boolean enabled, MockEnvironment environment) {
 		return new LocalApprovedDriverSeed(enabled, environment, null, null, null, null, null, null, null, null, null);
 	}

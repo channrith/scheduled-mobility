@@ -27,7 +27,11 @@ public class PlaceService implements PlaceDirectory {
 	static final double MIN_LAT = 9.5, MAX_LAT = 15.0, MIN_LNG = 102.0, MAX_LNG = 108.0;
 
 	public record PlaceInput(String nameKm, String nameEn, Double latitude, Double longitude, PlaceType type,
-			String pickupNotesKm, String pickupNotesEn, Boolean verified) {
+			String pickupNotesKm, String pickupNotesEn, Boolean verified, String formattedAddressEn, String formattedAddressKm) {
+        public PlaceInput(String nameKm, String nameEn, Double latitude, Double longitude, PlaceType type,
+                String pickupNotesKm, String pickupNotesEn, Boolean verified) {
+            this(nameKm,nameEn,latitude,longitude,type,pickupNotesKm,pickupNotesEn,verified,null,null);
+        }
 	}
 
 	private final PlaceRepository places;
@@ -44,7 +48,9 @@ public class PlaceService implements PlaceDirectory {
 
 	@Transactional
 	public Place create(PlaceInput input) {
-		Place place = places.saveAndFlush(new Place(validate(input)));
+		Place place = new Place(validate(input));
+        place.addresses(input.formattedAddressEn(), input.formattedAddressKm());
+        places.saveAndFlush(place);
 		auditLog.record("place.created", "place", place.getId(), Map.of("verified", place.isVerified()));
 		return place;
 	}
@@ -60,6 +66,7 @@ public class PlaceService implements PlaceDirectory {
 		}
 		boolean wasVerified = place.isVerified();
 		place.apply(validate(input));
+        place.addresses(input.formattedAddressEn(), input.formattedAddressKm());
 		places.saveAndFlush(place);
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("verified", place.isVerified());
@@ -142,7 +149,7 @@ public class PlaceService implements PlaceDirectory {
 		if (in.latitude() == null || in.longitude() == null || in.type() == null) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "validation");
 		}
-		if (in.latitude() < MIN_LAT || in.latitude() > MAX_LAT || in.longitude() < MIN_LNG || in.longitude() > MAX_LNG) {
+		if (!Double.isFinite(in.latitude()) || !Double.isFinite(in.longitude()) || in.latitude() < MIN_LAT || in.latitude() > MAX_LAT || in.longitude() < MIN_LNG || in.longitude() > MAX_LNG) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "place.outside-cambodia");
 		}
 		return new PlaceDetails(km, en, in.latitude(), in.longitude(), in.type(), blankToNull(in.pickupNotesKm()),

@@ -94,7 +94,7 @@ class IdempotencyFilter extends OncePerRequestFilter {
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
-		return !METHODS.contains(request.getMethod()) || request.getHeader(HEADER) == null
+		return request.getRequestURI().equals("/api/v1/booking/availability") || !METHODS.contains(request.getMethod()) || request.getHeader(HEADER) == null
 				|| !request.getRequestURI().startsWith("/api/");
 	}
 

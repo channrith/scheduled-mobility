@@ -99,6 +99,19 @@ class OsrmRoutingClientTest {
 			.collect(java.util.stream.Collectors.joining("\n"));
 	}
 
+    @Test
+    void geometryComesFromTheSameRouteResponse() {
+        status=200;
+        body="""
+            {"code":"Ok","routes":[{"distance":1234,"duration":456,"geometry":"_p~iF~ps|U_ulLnnqC_mqNvxq`@"}]}
+            """;
+        var route=client.route(RIVERSIDE,AIRPORT);
+        assertThat(route.distanceMeters()).isEqualTo(1234);
+        assertThat(route.durationSeconds()).isEqualTo(456);
+        assertThat(route.geometry().encodedPolyline()).isEqualTo("_p~iF~ps|U_ulLnnqC_mqNvxq`@");
+        assertThat(lastPath.get()).contains("overview=full&geometries=polyline");
+    }
+
 	@Test
 	void readsTheResponseTheRealServerSent() {
 		status = 200;
@@ -155,7 +168,7 @@ class OsrmRoutingClientTest {
 		Route route = client.route(RIVERSIDE, AIRPORT);
 
 		assertThat(route).isEqualTo(new Route(31246, 2412, RoutingSource.OSRM));
-		assertThat(lastPath.get()).startsWith("/route/v1/driving/104.931000,11.568300;104.862000,11.365000?overview=false");
+		assertThat(lastPath.get()).startsWith("/route/v1/driving/104.931000,11.568300;104.862000,11.365000?overview=full");
 	}
 
 	@Test

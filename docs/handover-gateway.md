@@ -1,3 +1,9 @@
+> Passenger Phase 3/4 integration verified locally: [final payloads, checks and release limits](passenger-booking-integration.md). No production deployment.
+
+> Backend booking contract reconciled locally: [Phase 2](phase2-booking-contract.md). ON_DEMAND and metered gates default off; no deployment.
+
+> 2026-11-01 local booking-mode increment: see [handover-booking-modes.md](handover-booking-modes.md). It is uncommitted and undeployed; the staging history below is unchanged.
+
 # Handover: API gateway, phase 1 (single API host) — and what comes next
 
 Written 2026-10-30, updated 2026-10-31. **Start here** in a new Claude Code session: this is the latest handover.
@@ -198,3 +204,26 @@ update this handover.
 **Commits:** `refactor(security): platform-security module (JWKS, token checks, request IDs); core-app serves its
 JWKS` · `feat(gateway): reject missing or invalid tokens at the edge; public-route list` · `chore(deploy): JWKS URL
 for gateway and location-service; docs`.
+
+
+## Local main sync (2026-11-02)
+
+- Merged `origin/main` at `78f6b09` into `feature/location-jwt-authentication` (`abbed50`).
+- Resolved location-service conflicts using the default core-app JWKS URL, retaining tracking/presence
+  configuration, issuer configuration, service readiness dependencies, and existing test coverage.
+  PEM-based tests explicitly disable the default JWKS source.
+- Restored the pre-existing uncommitted booking work; its backup remains in the stash named
+  `codex-backup-before-origin-main-2026-11-02`. Renamed its internal metered pricing result to
+  `MeteredFare` to satisfy the unique-record-name check. Removed obsolete README PEM settings.
+- Validation: `scripts/check.sh` passed (557 backend tests, OpenAPI TypeScript generation, console
+  lint/typecheck/production build); staging Compose configuration and `scripts/dev.sh` syntax passed.
+  No application servers were left running; Docker Desktop was started for Testcontainers.
+
+### Passenger location APIs (2026-11-06, uncommitted)
+
+See [passenger location handover](handover-passenger-locations.md) for reverse
+lookup/provider configuration, additive search addresses, immutable quote route
+geometry, read-only eligibility preflight, V18 migration, controlled airport test
+fixture, endpoint examples and test results. Existing booking-mode work is
+preserved. No rollout flags, production coverage or operator-owned airport
+coordinates are changed; no deployment or live bookings were performed.

@@ -44,6 +44,17 @@ public class Place {
 	@Column(name = "pickup_notes_en")
 	private String pickupNotesEn;
 
+    @Column(name = "formatted_address_en")
+    private String formattedAddressEn;
+    @Column(name = "formatted_address_km")
+    private String formattedAddressKm;
+    public String getFormattedAddressEn() { return formattedAddressEn; }
+    public String getFormattedAddressKm() { return formattedAddressKm; }
+    void addresses(String en, String km) {
+        if(en != null) formattedAddressEn = en.isBlank() ? null : en.strip();
+        if(km != null) formattedAddressKm = km.isBlank() ? null : km.strip();
+    }
+
 	@Column(name = "usage_count", nullable = false)
 	private long usageCount;
 

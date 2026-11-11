@@ -56,7 +56,7 @@ public class OsrmRoutingClient implements RoutingClient {
 		try {
 			body = http.get()
 				// Built by hand: a URI template would percent-encode OSRM's ',' and ';' separators.
-				.uri(URI.create(baseUrl + "/route/v1/driving/" + coordinates + "?overview=false&alternatives=false&steps=false"))
+				.uri(URI.create(baseUrl + "/route/v1/driving/" + coordinates + "?overview=full&geometries=polyline&alternatives=false&steps=false"))
 				.retrieve()
 				.body(String.class);
 		}
@@ -88,8 +88,14 @@ public class OsrmRoutingClient implements RoutingClient {
 			throw new RoutingException(Kind.NO_ROUTE, "OSRM returned no route", null);
 		}
 		return new Route(Math.round(route.get("distance").asDouble()), Math.round(route.get("duration").asDouble()),
-				RoutingSource.OSRM);
+				RoutingSource.OSRM, geometry(route));
 	}
+
+    private Route.Geometry geometry(JsonNode route) {
+        String encoded = route.path("geometry").asString("");
+        if (encoded.isBlank() || encoded.length() > 100000) return null;
+        return new Route.Geometry("polyline", 5, encoded);
+    }
 
 	private boolean isNoRoute(String body) {
 		String code = parse(body).path("code").asString("");

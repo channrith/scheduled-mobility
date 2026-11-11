@@ -934,6 +934,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/booking/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check personal booking eligibility without creating a quote or booking
+         * @description Side-effect-free policy preflight. No driver supply, fare or reservation guarantee. Quoted requires both endpoints; metered requires pickup only. Business rejection returns 200 available=false with existing reason codes; malformed shape is 400. Quote and booking revalidate. No routing provider calls.
+         */
+        post: operations["check"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/booking/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Enabled personal booking type and fare-model combinations
+         * @description CASH only. combinations is authoritative for fare availability; modes retains legacy quoted-type discovery. Immediate and metered rollout flags default off. No production meter or automatic matching guarantee.
+         */
+        get: operations["options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/corporates/{corporateId}": {
         parameters: {
             query?: never;
@@ -1241,7 +1281,7 @@ export interface paths {
         put?: never;
         /**
          * Assign or reassign the driver (and backup)
-         * @description Needs a `reasonCode` (OTHER also a `note`) and the trip version you saw. Airport and corporate rides need a `backupDriverId`. Returns warnings (no shift, overlapping trip) that do not block.
+         * @description Needs a `reasonCode` (OTHER also a `note`) and the trip version you saw. Airport and corporate rides need a `backupDriverId`. Missing shifts produce warnings; conflicting primary or backup reservations return 409.
          *
          *     **Roles:** ADMIN, DISPATCHER
          */
@@ -1336,6 +1376,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/driver/meter/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit a measured GPS sample to the driver's active meter
+         * @description Requires Idempotency-Key. No active meter: no-op. Server validates timestamp, accuracy, continuity and speed; computes distance. The fare is finalized atomically with trip completion. Coverage gaps prevent completion and require operations assistance.
+         *
+         *     **Roles:** DRIVER
+         */
+        post: operations["sample"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/driver/shifts": {
         parameters: {
             query?: never;
@@ -1400,6 +1462,26 @@ export interface paths {
          *     **Roles:** DRIVER
          */
         get: operations["upcoming_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/driver/trips/{tripId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My assigned trip including the authoritative fare and optional destination
+         * @description **Roles:** DRIVER
+         */
+        get: operations["detail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1872,6 +1954,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/passenger/trips/{tripId}/tracking-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Authorize passenger live tracking
+         * @description Rider or original booker only. Available while the driver is en route, at pickup or in progress. Rechecked by location-service before every socket delivery. No location is returned here.
+         *
+         *     **Roles:** PASSENGER
+         */
+        get: operations["access"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Label a selected map pin
+         * @description Preserves selected coordinates. Internal placeId is returned only for an exact canonical landmark coordinate. No service eligibility guarantee. English/Khmer fallback. No result is 200 resolved=false; unavailable geocoder is 503.
+         */
+        get: operations["reverse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/places/search": {
         parameters: {
             query?: never;
@@ -1903,7 +2027,7 @@ export interface paths {
         put?: never;
         /**
          * Get a fare quote
-         * @description Pickup and drop-off as a landmark (`placeId`) or a map position. One end must be in our service area; the price is the version in force at `pickupAt` (default now): with `corporateId`, the company's override if it has one, else the city price. The quote is stored and never changes; it can be booked until `expiresAt`. `corporateId` needs staff or that company's admin/booker.
+         * @description Pickup and drop-off as a landmark (`placeId`) or a map position. One end must be in our service area; the price is the version in force at `pickupAt` (default now): with `corporateId`, the company's override if it has one, else the city price. The quote is stored and never changes; it can be booked until `expiresAt`. fareModel defaults to QUOTED; METERED is not eligible for a route quote. `corporateId` needs staff or that company's admin/booker.
          */
         post: operations["create"];
         delete?: never;
@@ -1946,8 +2070,8 @@ export interface paths {
         get: operations["upcoming"];
         put?: never;
         /**
-         * Book a ride from a quote
-         * @description Requires an `Idempotency-Key` header: a retry with the same key returns the first response. The quote must be yours and unexpired, and can be booked once. Fare, route and pickup time come from the quote. `type`: SCHEDULED (default), AIRPORT (`flightNo`; the quote must touch the airport zone) or RECURRING (`recurrence`: weekdays incl. the quote's own, `until` at most 90 days on; every trip at the quote's fare). Corporate quotes: `CORPORATE_INVOICE`, the member's booking policy is checked for every trip. `KHQR` is not available yet.
+         * Book a quoted or metered ride
+         * @description BookingType remains SCHEDULED, AIRPORT, RECURRING or ON_DEMAND. fareModel defaults to QUOTED for legacy callers; METERED must be explicit. QUOTED requires an owned, unexpired, unused quoteId; route, vehicle and time come from that quote, not direct overrides. ON_DEMAND requires a NOW quote and omits pickupAt/flight; SCHEDULED and AIRPORT require a future scheduled quote. METERED permits only ON_DEMAND or AIRPORT, requires pickup and vehicleClass, forbids quoteId/destination, and keeps fare pending until backend meter completion. Metered AIRPORT requires future pickupAt, flightNo and meetingPoint. Explicit fareModel or contractVersion=2 also requires quoted AIRPORT pickup in an airport zone and meetingPoint; legacy airport transfers remain compatible. RECURRING preserves weekdays/until (90 days) and QUOTED pricing. Idempotency-Key is required. Personal payment is CASH; corporate quoted rides use CORPORATE_INVOICE; KHQR is unavailable. ON_DEMAND and METERED each require their default-off backend feature configuration; no automatic driver matching or production meter readiness is implied.
          */
         post: operations["book"];
         delete?: never;
@@ -2012,6 +2136,12 @@ export interface components {
         };
         AcceptSuggestionsRequest: {
             items: components["schemas"]["AcceptItem"][];
+        };
+        Access: {
+            /** Format: uuid */
+            driverId?: string;
+            /** Format: uuid */
+            tripId?: string;
         };
         AccountDetail: {
             account?: components["schemas"]["AccountView"];
@@ -2097,7 +2227,7 @@ export interface components {
             driverId: string;
             note?: string;
             /** @enum {string} */
-            reasonCode: "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
+            reasonCode: "AUTO_ASSIGNED" | "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
             /** Format: int64 */
             tripVersion: number;
         };
@@ -2121,7 +2251,7 @@ export interface components {
             /** Format: uuid */
             previousDriverId?: string;
             /** @enum {string} */
-            reasonCode?: "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
+            reasonCode?: "AUTO_ASSIGNED" | "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
             role?: string;
         };
         AssignmentResultView: {
@@ -2153,6 +2283,27 @@ export interface components {
             occurredAt?: string;
             targetId?: string;
             targetType?: string;
+        };
+        Availability: {
+            /** Format: uuid */
+            airportZoneId?: string;
+            available?: boolean;
+            city?: string;
+            dropoffZoneTypes?: string[];
+            pickupZoneTypes?: string[];
+            reasons?: components["schemas"]["Reason"][];
+        };
+        AvailabilityRequest: {
+            dropoff?: components["schemas"]["Pin"];
+            /** @enum {string} */
+            fareModel: "QUOTED" | "METERED";
+            pickup: components["schemas"]["Pin"];
+            /** Format: date-time */
+            pickupAt?: string;
+            /** @enum {string} */
+            type: "SCHEDULED" | "AIRPORT" | "RECURRING" | "ON_DEMAND";
+            /** @enum {string} */
+            vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
         AvailabilityResponse: {
             /** @enum {string} */
@@ -2220,6 +2371,8 @@ export interface components {
             /** Format: uuid */
             corporateId?: string;
             dropoff: components["schemas"]["LocationRequest"];
+            /** @enum {string} */
+            fareModel?: "QUOTED" | "METERED";
             pickup: components["schemas"]["LocationRequest"];
             /** Format: date-time */
             pickupAt?: string;
@@ -2227,20 +2380,31 @@ export interface components {
             vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
         CreateRideRequest: {
+            /** Format: int32 */
+            contractVersion?: number;
             /** Format: uuid */
             costCenterId?: string;
+            dropoff?: components["schemas"]["Pickup"];
+            /** @enum {string} */
+            fareModel?: "QUOTED" | "METERED";
             flightNo?: string;
+            meetingPoint?: string;
             /** @enum {string} */
             paymentMethod: "CASH" | "KHQR" | "CORPORATE_INVOICE";
+            pickup?: components["schemas"]["Pickup"];
+            /** Format: date-time */
+            pickupAt?: string;
             pickupNotes?: string;
             pickupVoiceNoteKey?: string;
             /** Format: uuid */
-            quoteId: string;
+            quoteId?: string;
             recurrence?: components["schemas"]["RecurrenceRequest"];
             /** Format: uuid */
             riderMemberId?: string;
             /** @enum {string} */
             type?: "SCHEDULED" | "AIRPORT" | "RECURRING" | "ON_DEMAND";
+            /** @enum {string} */
+            vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
         DaySuggestionsView: {
             /** Format: date */
@@ -2269,7 +2433,7 @@ export interface components {
             /** Format: uuid */
             primaryDriverId?: string;
             /** @enum {string} */
-            reasonCode?: "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
+            reasonCode?: "AUTO_ASSIGNED" | "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
             /** Format: date-time */
             riskEvaluatedAt?: string;
             riskReason?: string;
@@ -2478,6 +2642,12 @@ export interface components {
             /** Format: int32 */
             sizeBytes?: number;
         };
+        Geometry: {
+            encodedPolyline?: string;
+            encoding?: string;
+            /** Format: int32 */
+            precision?: number;
+        };
         HistoryEntryView: {
             /** Format: date-time */
             effectiveUntil?: string;
@@ -2568,6 +2738,12 @@ export interface components {
             /** Format: uuid */
             intoPlaceId: string;
         };
+        Mode: {
+            /** @enum {string} */
+            fareModel?: "QUOTED" | "METERED";
+            /** @enum {string} */
+            type?: "SCHEDULED" | "AIRPORT" | "RECURRING" | "ON_DEMAND";
+        };
         Money: {
             /** Format: int64 */
             amountMinor?: number;
@@ -2581,6 +2757,15 @@ export interface components {
         OpsCancelRequest: {
             byDriver?: boolean;
             reason?: string;
+        };
+        Options: {
+            combinations?: components["schemas"]["Mode"][];
+            /** Format: int64 */
+            maximumScheduleDays?: number;
+            /** Format: int32 */
+            minimumScheduleNoticeSeconds?: number;
+            modes?: ("SCHEDULED" | "AIRPORT" | "RECURRING" | "ON_DEMAND")[];
+            timezone?: string;
         };
         OtpRequest: {
             phone: string;
@@ -2666,9 +2851,27 @@ export interface components {
             id?: string;
             name?: string;
         };
+        Pickup: {
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: uuid */
+            placeId?: string;
+        };
+        Pin: {
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: uuid */
+            placeId?: string;
+        };
         PlaceHit: {
             /** Format: double */
             distanceMeters?: number;
+            formattedAddressEn?: string | null;
+            formattedAddressKm?: string | null;
             /** Format: uuid */
             id?: string;
             /** Format: double */
@@ -2686,6 +2889,8 @@ export interface components {
             verified?: boolean;
         };
         PlaceRequest: {
+            formattedAddressEn?: string;
+            formattedAddressKm?: string;
             /** Format: double */
             latitude: number;
             /** Format: double */
@@ -2714,6 +2919,8 @@ export interface components {
             verified?: boolean;
         };
         PlaceView: {
+            formattedAddressEn?: string;
+            formattedAddressKm?: string;
             /** Format: uuid */
             id?: string;
             /** Format: double */
@@ -2811,6 +3018,8 @@ export interface components {
             pickup?: components["schemas"]["LocationView"];
             /** Format: date-time */
             pickupAt?: string;
+            /** @description Immutable priced route geometry; null for straight-line or older quotes */
+            route?: components["schemas"]["Geometry"] | null;
             /** @enum {string} */
             routingSource?: "OSRM" | "STRAIGHT_LINE";
             /** Format: uuid */
@@ -2828,6 +3037,12 @@ export interface components {
             hasActiveVehicle?: boolean;
             missing?: string[];
             pendingReview?: string[];
+        };
+        Reason: {
+            code?: string;
+            detail?: string;
+            end?: string;
+            field?: string;
         };
         ReasonRequest: {
             reason?: string;
@@ -2872,6 +3087,18 @@ export interface components {
             /** @enum {string} */
             vehicleClass: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
+        ReversePlaceResult: {
+            formattedAddress?: string | null;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            name?: string | null;
+            pickupInstructions?: string | null;
+            /** Format: uuid */
+            placeId?: string | null;
+            resolved?: boolean;
+        };
         RidePointView: {
             /** Format: double */
             latitude?: number;
@@ -2899,9 +3126,13 @@ export interface components {
             equivalentMinor?: number;
             /** Format: int64 */
             fareMinor?: number;
+            /** @enum {string} */
+            fareModel?: "QUOTED" | "METERED";
+            fareStatus?: string;
             flightNo?: string;
             /** Format: uuid */
             id?: string;
+            meetingPoint?: string;
             /** @enum {string} */
             paymentMethod?: "CASH" | "KHQR" | "CORPORATE_INVOICE";
             pickup?: components["schemas"]["RidePointView"];
@@ -2976,6 +3207,16 @@ export interface components {
             /** @enum {string} */
             vehicleClass?: "MOTO" | "TUKTUK_REMORK" | "TUKTUK_RICKSHAW" | "CAR" | "SUV" | "VAN";
         };
+        Sample: {
+            /** Format: double */
+            accuracyMeters?: number;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: date-time */
+            recordedAt?: string;
+        };
         SavedRequest: {
             customLabel?: string;
             /** @enum {string} */
@@ -3017,7 +3258,7 @@ export interface components {
             backupDriverId?: string;
             note?: string;
             /** @enum {string} */
-            reasonCode: "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
+            reasonCode: "AUTO_ASSIGNED" | "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
         };
         SettingRequest: {
             value: number;
@@ -3158,7 +3399,11 @@ export interface components {
             equivalentMinor?: number;
             /** Format: int64 */
             fareMinor?: number;
+            /** @enum {string} */
+            fareModel?: "QUOTED" | "METERED";
+            fareStatus?: string;
             flightNo?: string;
+            meetingPoint?: string;
             /** @enum {string} */
             paymentMethod?: "CASH" | "KHQR" | "CORPORATE_INVOICE";
             pickup?: components["schemas"]["RidePointView"];
@@ -3173,7 +3418,7 @@ export interface components {
         UnassignTripRequest: {
             note?: string;
             /** @enum {string} */
-            reasonCode: "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
+            reasonCode: "AUTO_ASSIGNED" | "PLANNED" | "SUGGESTION_ACCEPTED" | "DRIVER_UNAVAILABLE" | "DRIVER_LATE" | "VEHICLE_ISSUE" | "CUSTOMER_REQUEST" | "REBALANCE" | "BACKUP_SWITCH" | "OTHER";
             /** Format: int64 */
             tripVersion: number;
         };
@@ -3227,6 +3472,8 @@ export interface components {
             version: number;
         };
         UpdatePlaceRequest: {
+            formattedAddressEn?: string;
+            formattedAddressKm?: string;
             /** Format: double */
             latitude: number;
             /** Format: double */
@@ -6867,6 +7114,112 @@ export interface operations {
             };
         };
     };
+    check: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+                /** @description Optional, 1–255 chars (a UUID is ideal). Retrying with the same key and body replays the first response with `Idempotent-Replayed: true`; a different body returns 422. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Availability"];
+                };
+            };
+            /** @description Malformed request or booking.invalid-combination */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description booking.availability-unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    options: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Options"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     account: {
         parameters: {
             query?: never;
@@ -8300,6 +8653,77 @@ export interface operations {
             };
         };
     };
+    sample: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Sample"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request (`code` explains why) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict: invalid state transition, duplicate or concurrent update (`code` explains which) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `idempotency.key-reused`: same Idempotency-Key, different body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     mine: {
         parameters: {
             query?: never;
@@ -8528,6 +8952,58 @@ export interface operations {
             };
             /** @description Authenticated, but not allowed (role or scope) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    detail: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                tripId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TripWithRideView"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10257,6 +10733,111 @@ export interface operations {
             };
         };
     };
+    access: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path: {
+                tripId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Access"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Authenticated, but not allowed (role or scope) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reverse: {
+        parameters: {
+            query: {
+                lat: number;
+                lng: number;
+            };
+            header?: {
+                /** @description Language of error messages and SMS: `km` (default) or `en` */
+                "Accept-Language"?: "km" | "en";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReversePlaceResult"];
+                };
+            };
+            /** @description Missing, invalid or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description places.geocoding-rate-limited; Retry-After in seconds */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description places.geocoding-unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     search: {
         parameters: {
             query: {
@@ -10472,7 +11053,7 @@ export interface operations {
                     "*/*": components["schemas"]["RideView"];
                 };
             };
-            /** @description Invalid request (`code` explains why) */
+            /** @description booking.invalid-combination with field context for incompatible type, fare model, route or timing fields; booking.invalid-field for missing required data */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -25,7 +25,9 @@ public class PlaceSearch {
 	static final double PROXIMITY_HALF_KM = 5.0;
 
 	public record PlaceHit(UUID id, String nameKm, String nameEn, PlaceType type, double latitude, double longitude,
-			String pickupNotesKm, String pickupNotesEn, boolean verified, Double distanceMeters, double score) {
+			String pickupNotesKm, String pickupNotesEn, boolean verified, Double distanceMeters, double score,
+            @io.swagger.v3.oas.annotations.media.Schema(types={"string", "null"}) String formattedAddressEn,
+            @io.swagger.v3.oas.annotations.media.Schema(types={"string", "null"}) String formattedAddressKm) {
 	}
 
 	private final NamedParameterJdbcTemplate jdbc;
@@ -70,6 +72,7 @@ public class PlaceSearch {
 		return jdbc.query(sql, params, (rs, i) -> new PlaceHit(rs.getObject("id", UUID.class), rs.getString("name_km"),
 				rs.getString("name_en"), PlaceType.valueOf(rs.getString("place_type")), rs.getDouble("latitude"),
 				rs.getDouble("longitude"), rs.getString("pickup_notes_km"), rs.getString("pickup_notes_en"),
-				rs.getBoolean("verified"), (Double) rs.getObject("distance_m"), rs.getDouble("score")));
+				rs.getBoolean("verified"), (Double) rs.getObject("distance_m"), rs.getDouble("score"),
+                rs.getString("formatted_address_en"), rs.getString("formatted_address_km")));
 	}
 }

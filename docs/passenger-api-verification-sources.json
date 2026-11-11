@@ -1,0 +1,8 @@
+{
+  "baseRevision": "abbed5073504dc1c63fc4be4a0b32341c3a8fe10",
+  "date": "2026-11-06",
+  "snapshot": "/tmp/passenger-api-review-uchkyrbi",
+  "sourceSha256": "77f5f2c1dfd4403962bea429ee6db412648fea9356cbeb9a72f3f628c9202d70",
+  "sourceFileCount": 425,
+  "fingerprintMethod": "Sorted core-app/src and platform-security/src paths, each followed by NUL, file SHA-256 and newline; SHA-256 of concatenation."
+}

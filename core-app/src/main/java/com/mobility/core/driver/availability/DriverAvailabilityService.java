@@ -58,11 +58,19 @@ class DriverAvailabilityService {
 			String nextVersion = current.version() == Long.MAX_VALUE ? "" : Long.toString(current.version() + 1);
 			Long result;
 			try {
-				result = redis.execute(UPDATE, List.of("driver:availability:" + driverId),
-						fields.isEmpty() ? "missing" : "present", current.status().name(),
-						fields.getOrDefault("version", "0"), fields.getOrDefault("updatedAt", ""),
-						Long.toString(current.version()), request.expectedVersion().toString(),
-						request.status().name(), nextVersion, now.toString());
+				result = redis.execute(
+						UPDATE,
+						List.of("driver:availability:" + driverId),
+						fields.isEmpty() ? "missing" : "present",
+						current.status().name(),
+						fields.getOrDefault("version", "0"),
+						fields.getOrDefault("updatedAt", ""),
+						Long.toString(current.version()),
+						request.expectedVersion().toString(),
+						request.status().name(),
+						nextVersion,
+						now.toString()
+				);
 			}
 			catch (RuntimeException ex) {
 				log.warn("Driver availability Redis update failed ({})", ex.getClass().getSimpleName());

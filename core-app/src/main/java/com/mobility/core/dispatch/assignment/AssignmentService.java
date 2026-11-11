@@ -71,9 +71,11 @@ public class AssignmentService {
 
 	private final Clock clock;
 
+	private final AssignmentGuard guard;
+
 	AssignmentService(TripAssignmentRepository assignments, AssignmentHistoryRepository history, ShiftBlockRepository shifts,
 			Trips trips, DriverDirectory drivers, ExceptionService exceptions, DispatchProperties properties, Outbox outbox,
-			AuditLog auditLog, Clock clock) {
+			AuditLog auditLog, Clock clock, AssignmentGuard guard) {
 		this.assignments = assignments;
 		this.history = history;
 		this.shifts = shifts;
@@ -84,6 +86,7 @@ public class AssignmentService {
 		this.outbox = outbox;
 		this.auditLog = auditLog;
 		this.clock = clock;
+		this.guard = guard;
 	}
 
 	/**
@@ -93,8 +96,11 @@ public class AssignmentService {
 	@Transactional
 	public Result assign(UUID tripId, UUID driverId, UUID backupDriverId, ReasonCode reason, String note, long tripVersion,
 			UUID actorUserId) {
+		guard.lockTrip(tripId);
 		String n = reasonNote(reason, note);
+		guard.lock(driverId, backupDriverId);
 		TripInfo trip = requireTrip(tripId);
+		guard.requireAvailable(trip, driverId);
 		if (backupDriverId != null && backupDriverId.equals(driverId)) {
 			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "dispatch.backup-same-as-primary");
 		}
@@ -103,6 +109,7 @@ public class AssignmentService {
 		}
 		if (backupDriverId != null) {
 			checkDriver(backupDriverId, trip, "backup");
+			guard.requireAvailable(trip, backupDriverId);
 		}
 		Instant now = now();
 		TripAssignment a = assignments.findById(tripId).orElseGet(() -> new TripAssignment(tripId, now));
@@ -129,10 +136,43 @@ public class AssignmentService {
 		return new Result(saved, assigned, warnings(assigned, saved));
 	}
 
+	/** Recheck before reporting failure: a dispatcher may have assigned or cancelled meanwhile. */
+	@Transactional
+	public boolean reportUnassigned(UUID tripId, String reason, Severity severity) {
+		guard.lockTrip(tripId);
+		var trip = trips.find(tripId).orElse(null);
+		if (trip == null || trip.status() != TripStatus.SCHEDULED || trip.driverId() != null) {
+			return false;
+		}
+		exceptions.raise(ExceptionType.UNASSIGNED, tripId, null, severity, trip.pickupAt(),
+				Map.of("automaticAssignment", reason));
+		return true;
+	}
+
+	/** Rechecks live state and shifts under the same locks used by manual assignments. */
+	@Transactional
+	public Result assignAutomatically(UUID tripId, UUID primary, UUID backup, long version) {
+		guard.lockTrip(tripId);
+		guard.lock(primary, backup);
+		TripInfo trip = requireTrip(tripId);
+		if (trip.status() != TripStatus.SCHEDULED || trip.driverId() != null || trip.version() != version) {
+			throw new ApiException(HttpStatus.CONFLICT, "concurrent-update");
+		}
+		for (UUID driver : backup == null ? List.of(primary) : List.of(primary, backup)) {
+			if (shifts.overlapping(List.of(driver), trip.pickupAt(), trip.dropoffAt()).stream()
+					.noneMatch(s -> s.covers(trip.pickupAt(), trip.dropoffAt()))) {
+				throw new ApiException(HttpStatus.CONFLICT, "dispatch.auto-no-shift");
+			}
+		}
+		return assign(tripId, primary, backup, ReasonCode.AUTO_ASSIGNED, null, version, null);
+	}
+
 	/** Sets, changes or clears the backup. {@code assignmentVersion} = the assignment version the dispatcher saw. */
 	@Transactional
 	public Result setBackup(UUID tripId, UUID backupDriverId, ReasonCode reason, String note, long assignmentVersion,
 			UUID actorUserId) {
+		guard.lockTrip(tripId);
+		guard.lock(backupDriverId);
 		String n = reasonNote(reason, note);
 		TripInfo trip = requireTrip(tripId);
 		TripAssignment a = requireAssignment(tripId, assignmentVersion);
@@ -141,6 +181,7 @@ public class AssignmentService {
 				throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "dispatch.backup-same-as-primary");
 			}
 			checkDriver(backupDriverId, trip, "backup");
+			guard.requireAvailable(trip, backupDriverId);
 		}
 		else if (trip.slaTrip()) {
 			throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "dispatch.backup-required");
@@ -161,6 +202,7 @@ public class AssignmentService {
 
 	@Transactional
 	public Result unassign(UUID tripId, ReasonCode reason, String note, long tripVersion, UUID actorUserId) {
+		guard.lockTrip(tripId);
 		String n = reasonNote(reason, note);
 		TripInfo trip = requireTrip(tripId);
 		Instant now = now();
@@ -180,12 +222,16 @@ public class AssignmentService {
 	 */
 	@Transactional
 	public Result switchToBackup(UUID tripId, long assignmentVersion, String note, UUID actorUserId) {
+		guard.lockTrip(tripId);
+		guard.lockForTrip(tripId);
 		TripAssignment a = requireAssignment(tripId, assignmentVersion);
 		UUID backup = a.getBackupDriverId();
 		if (backup == null) {
 			throw new ApiException(HttpStatus.CONFLICT, "dispatch.no-backup");
 		}
 		TripInfo trip = requireTrip(tripId);
+		checkDriver(backup, trip, "backup");
+		guard.requireAvailable(trip, backup);
 		String n = note == null || note.isBlank() ? null : note.strip();
 		Instant now = now();
 		UUID previous = trip.driverId();
@@ -211,6 +257,7 @@ public class AssignmentService {
 	/** The assigned driver (primary or backup) confirms they will do it. */
 	@Transactional
 	public TripAssignment confirm(UUID tripId, UUID driverUserId) {
+		guard.lockTrip(tripId);
 		DriverInfo driver = driverOfUser(driverUserId);
 		TripAssignment a = assignmentOf(tripId, driver.driverId());
 		boolean primary = driver.driverId().equals(a.getPrimaryDriverId());
@@ -227,6 +274,7 @@ public class AssignmentService {
 	/** The assigned driver cannot do it: they are taken off and the trip goes to the exception queue. */
 	@Transactional
 	public TripAssignment decline(UUID tripId, UUID driverUserId, String reason) {
+		guard.lockTrip(tripId);
 		DriverInfo driver = driverOfUser(driverUserId);
 		TripAssignment a = assignmentOf(tripId, driver.driverId());
 		boolean primary = driver.driverId().equals(a.getPrimaryDriverId());
